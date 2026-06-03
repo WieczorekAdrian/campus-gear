@@ -1,0 +1,41 @@
+### Dodanie nowego sprzętu (Żądanie POST)
+POST http://localhost:8080/api/equipment
+Content-Type: application/json
+
+{
+  "deviceType": "Interfejs Audio",
+  "technicalSpecification": "Focusrite Scarlett Solo 3rd Gen (wersja z jednym, zintegrowanym pokrętłem sterującym monitorami i słuchawkami naraz)",
+  "serialNumber": "FSS-3G-882190",
+  "location": "Studio Nagrań A",
+  "status": "DOSTĘPNY"
+}
+
+###
+
+### Pobranie listy całego sprzętu (Żądanie GET)
+GET http://localhost:8080/api/equipment
+
+### Edycja sprzętu (Żądanie PUT) - aktualizujemy sprzęt o ID 1
+PUT http://localhost:8080/api/equipment/1
+Content-Type: application/json
+
+{
+  "deviceType": "Interfejs Audio",
+  "technicalSpecification": "Focusrite Scarlett Solo 3rd Gen",
+  "serialNumber": "FSS-3G-882190",
+  "location": "Magazyn Główny",
+  "status": "ZAREZERWOWANY"
+}
+
+###
+
+### Usunięcie sprzętu (Żądanie DELETE) - usuwamy sprzęt o ID 1
+DELETE http://localhost:8080/api/equipment/2
+
+### Wyszukiwanie po statusie
+GET http://localhost:8080/api/equipment/search/status?value=DOSTĘPNY
+
+###
+
+### Wyszukiwanie po typie
+GET http://localhost:8080/api/equipment/search/type?value=Interfejs Audio
