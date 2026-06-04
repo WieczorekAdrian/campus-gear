@@ -1,9 +1,7 @@
 package com.campusgear.demo.entity;
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
+import com.campusgear.demo.status.EquipmentStatus;
+import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -20,6 +18,7 @@ public class EquipmentEntity {
     private String technicalSpecification;
     private String serialNumber;
     private String location;
-    private String status;
+    @Enumerated(EnumType.STRING)
+    private EquipmentStatus status;
 
 }

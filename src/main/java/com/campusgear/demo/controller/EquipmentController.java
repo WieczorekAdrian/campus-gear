@@ -1,6 +1,7 @@
 package com.campusgear.demo.controller;
 
 import com.campusgear.demo.entity.EquipmentEntity;
+import com.campusgear.demo.status.EquipmentStatus;
 import com.campusgear.demo.repository.EquipmentEntityRepository;
 import org.springframework.web.bind.annotation.*;
 
@@ -55,7 +56,7 @@ public class EquipmentController {
     // Endpoint do WYSZUKIWANIA sprzętu po statusie (Żądanie GET)
     // Przykład: http://localhost:8080/api/equipment/search/status?value=DOSTĘPNY
     @GetMapping("/search/status")
-    public List<EquipmentEntity> getEquipmentByStatus(@RequestParam String value) {
+    public List<EquipmentEntity> getEquipmentByStatus(@RequestParam EquipmentStatus value) {
         return equipmentEntityRepository.findByStatus(value);
     }
 
