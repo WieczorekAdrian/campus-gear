@@ -3,6 +3,7 @@ package com.campusgear.demo.controller;
 import com.campusgear.demo.entity.EquipmentEntity;
 import com.campusgear.demo.status.EquipmentStatus;
 import com.campusgear.demo.repository.EquipmentEntityRepository;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -26,6 +27,7 @@ public class EquipmentController {
 
     // Endpoint do DODAWANIA nowego sprzętu
     @PostMapping
+    @ResponseStatus(HttpStatus.CREATED)
     public EquipmentEntity addEquipment(@RequestBody EquipmentEntity equipment) {
         return equipmentEntityRepository.save(equipment);
     }
@@ -49,6 +51,7 @@ public class EquipmentController {
 
     // Endpoint do USUWANIA sprzętu (Żądanie DELETE)
     @DeleteMapping("/{id}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
     public void deleteEquipment(@PathVariable Long id) {
         equipmentEntityRepository.deleteById(id);
     }
