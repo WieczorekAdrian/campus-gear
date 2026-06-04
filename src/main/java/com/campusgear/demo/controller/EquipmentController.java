@@ -51,9 +51,10 @@ public class EquipmentController {
     // --- METODY MODYFIKUJĄCE (Tylko dla Opiekuna) ---
 
     @PostMapping
-    @ResponseStatus(HttpStatus.CREATED)
-    public EquipmentEntity addEquipment(@RequestBody EquipmentEntity equipment) {
-        return equipmentEntityRepository.save(equipment);
+    @PreAuthorize("hasRole('OPIEKUN')")
+    public ResponseEntity<EquipmentResponseDTO> addEquipment(@RequestBody EquipmentRequestDTO equipment) {
+        EquipmentResponseDTO response = equipmentService.addEquipment(equipment);
+        return new ResponseEntity<>(response, HttpStatus.CREATED);
     }
 
     @PutMapping("/{id}")
@@ -64,6 +65,7 @@ public class EquipmentController {
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('OPIEKUN')")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void deleteEquipment(@PathVariable Long id) {
         equipmentEntityRepository.deleteById(id);
