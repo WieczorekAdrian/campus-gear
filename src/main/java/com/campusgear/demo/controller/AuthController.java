@@ -3,12 +3,15 @@ package com.campusgear.demo.controller;
 import com.campusgear.demo.dto.LoginDto;
 import com.campusgear.demo.dto.RegisterDto;
 import com.campusgear.demo.dto.TokenDto;
+import com.campusgear.demo.dto.UserAuthResponseDTO;
 import com.campusgear.demo.service.AuthService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import java.security.Principal;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -36,5 +39,13 @@ public class AuthController {
     public ResponseEntity<TokenDto> loginUser(@Valid @RequestBody LoginDto dto) {
         TokenDto tokenDto = authService.login(dto);
         return ResponseEntity.ok(tokenDto);
+    }
+    @GetMapping("/me")
+    public ResponseEntity<UserAuthResponseDTO> getCurrentUser(Principal principal) {
+        // Logika jest w serwisie, kontroler tylko deleguje zadanie
+        // principal.getName() to w Spring Security zazwyczaj email zalogowanego użytkownika
+        UserAuthResponseDTO userData = authService.getCurrentUser(principal.getName());
+
+        return ResponseEntity.ok(userData);
     }
 }

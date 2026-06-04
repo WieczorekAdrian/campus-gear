@@ -6,17 +6,20 @@ import com.campusgear.demo.repository.UserEntityRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.testcontainers.shaded.com.fasterxml.jackson.databind.ObjectMapper;
 
 import static org.hamcrest.Matchers.notNullValue;
+
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 // Usuwamy @SpringBootTest, bo dziedziczymy go z klasy abstrakcyjnej!
 @AutoConfigureMockMvc
+@SpringBootTest
 class AuthControllerIntegrationTest extends AbstractIntegrationTest {
 
     @Autowired
@@ -24,7 +27,6 @@ class AuthControllerIntegrationTest extends AbstractIntegrationTest {
 
     @Autowired
     private UserEntityRepository userRepository;
-
 
 
     @BeforeEach

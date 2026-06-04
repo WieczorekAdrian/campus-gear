@@ -3,6 +3,7 @@ package com.campusgear.demo.service;
 import com.campusgear.demo.dto.LoginDto;
 import com.campusgear.demo.dto.RegisterDto;
 import com.campusgear.demo.dto.TokenDto;
+import com.campusgear.demo.dto.UserAuthResponseDTO;
 import com.campusgear.demo.status.Role;
 import com.campusgear.demo.entity.UserEntity;
 import com.campusgear.demo.repository.UserEntityRepository;
@@ -65,5 +66,17 @@ public class AuthService {
         // 4. Generujemy token JWT i pakujemy go w TokenDto
         String token = tokenProvider.generateToken(authentication);
         return new TokenDto(token);
+    }
+    public UserAuthResponseDTO getCurrentUser(String email) {
+        UserEntity user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("Nie znaleziono użytkownika"));
+
+        // Tu dzieje się całe mapowanie. Kontroler o tym nie wie.
+        return new UserAuthResponseDTO(
+                user.getEmail(),
+                user.getRole().toString(),
+                user.getFirstName(),
+                user.getLastName()
+        );
     }
 }
