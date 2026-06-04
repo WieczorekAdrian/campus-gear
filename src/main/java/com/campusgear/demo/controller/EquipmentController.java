@@ -4,11 +4,7 @@ import com.campusgear.demo.dto.EquipmentRequestDTO;
 import com.campusgear.demo.dto.EquipmentResponseDTO;
 import com.campusgear.demo.entity.EquipmentEntity;
 import com.campusgear.demo.repository.EquipmentEntityRepository;
-import com.campusgear.demo.service.EquipmentService;
-import com.campusgear.demo.status.EquipmentStatus;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -51,11 +47,9 @@ public class EquipmentController {
     // --- METODY MODYFIKUJĄCE (Tylko dla Opiekuna) ---
 
     @PostMapping
-    @PreAuthorize("hasRole('OPIEKUN')") // Zabezpieczenie: tylko ta rola ma dostęp
-    public ResponseEntity<EquipmentResponseDTO> addEquipment(@RequestBody EquipmentRequestDTO equipment) {
-        EquipmentResponseDTO response = equipmentService.addEquipment(equipment);
-        // Zwracamy kod 201 (CREATED) zamiast domyślnego 200 (OK) - bardzo profesjonalna praktyka!
-        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    @ResponseStatus(HttpStatus.CREATED)
+    public EquipmentEntity addEquipment(@RequestBody EquipmentEntity equipment) {
+        return equipmentEntityRepository.save(equipment);
     }
 
     @PutMapping("/{id}")
@@ -66,8 +60,8 @@ public class EquipmentController {
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasRole('OPIEKUN')") // Warto od razu zabezpieczyć też usuwanie!
-    public ResponseEntity<Void> deleteEquipment(@PathVariable Long id) {
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void deleteEquipment(@PathVariable Long id) {
         equipmentEntityRepository.deleteById(id);
         return ResponseEntity.noContent().build(); // Zwracamy kod 204 (NO CONTENT) - standard przy usuwaniu
     }
