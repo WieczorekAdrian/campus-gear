@@ -47,11 +47,11 @@ function EquipmentList() {
                 <button
                     onClick={() => {
                         const testData = {
-                            name: "Aparat Sony A7 III",
+                            deviceType: "Aparat Sony A7 III",                // Zamiast name
+                            technicalSpecification: "Kategoria: Foto/Wideo", // Zamiast category
                             serialNumber: "SN-987654321",
-                            category: "Foto/Wideo",
                             location: "Magazyn Główny - Regał 2",
-                            status: "Dostępny"
+                            status: "DOSTEPNY"
                         };
 
                         axios.post('/api/equipment', testData)
