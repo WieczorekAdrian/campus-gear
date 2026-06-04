@@ -20,5 +20,6 @@ public class EquipmentEntity {
     private String location;
     @Enumerated(EnumType.STRING)
     private EquipmentStatus status;
+    private boolean isAcademicAccount;
 
 }
