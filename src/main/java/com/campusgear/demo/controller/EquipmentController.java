@@ -1,7 +1,7 @@
 package com.campusgear.demo.controller;
 
 import com.campusgear.demo.entity.EquipmentEntity;
-import com.campusgear.demo.entity.EquipmentStatus;
+import com.campusgear.demo.status.EquipmentStatus;
 import com.campusgear.demo.repository.EquipmentEntityRepository;
 import org.springframework.web.bind.annotation.*;
 

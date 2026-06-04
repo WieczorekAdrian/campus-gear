@@ -1,5 +1,6 @@
 package com.campusgear.demo.entity;
 
+import com.campusgear.demo.status.EquipmentStatus;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;

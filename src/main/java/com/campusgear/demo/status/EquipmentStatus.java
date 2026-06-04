@@ -1,4 +1,4 @@
-package com.campusgear.demo.entity;
+package com.campusgear.demo.status;
 
 public enum EquipmentStatus {
     DOSTEPNY,

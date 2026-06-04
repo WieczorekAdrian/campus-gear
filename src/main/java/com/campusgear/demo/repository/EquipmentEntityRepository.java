@@ -1,7 +1,7 @@
 package com.campusgear.demo.repository;
 
 import com.campusgear.demo.entity.EquipmentEntity;
-import com.campusgear.demo.entity.EquipmentStatus;
+import com.campusgear.demo.status.EquipmentStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
