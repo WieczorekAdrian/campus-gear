@@ -1,12 +1,11 @@
 import React, { useState } from 'react';
 import axios from '../api/axiosConfig';
 import { useNavigate, Link } from 'react-router-dom';
+import myLogo from '../assets/logo.png';
 
-// Importy komponentów shadcn/ui
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 function Login() {
     const [email, setEmail] = useState('');
@@ -18,11 +17,21 @@ function Login() {
     const handleLogin = (e) => {
         e.preventDefault();
 
+        // 1. Uderzamy w endpoint logowania
         axios.post('/api/auth/login', { email, password })
             .then(response => {
+                // 2. Zapisujemy token (wiemy z dokumentacji, że to na pewno przychodzi)
                 localStorage.setItem('token', response.data.token);
-                localStorage.setItem('role', response.data.role);
 
+                // 3. Natychmiast uderzamy w niezawodny endpoint z danymi użytkownika
+                return axios.get('/api/auth/me');
+            })
+            .then(meResponse => {
+                // 4. Pobieramy i zapisujemy rolę i imię z drugiego żądania
+                localStorage.setItem('role', meResponse.data.role);
+                localStorage.setItem('firstName', meResponse.data.firstName);
+
+                // 5. Dopiero teraz przekierowujemy użytkownika na listę sprzętu
                 navigate('/equipment');
             })
             .catch(error => {
@@ -32,57 +41,71 @@ function Login() {
     };
 
     return (
-        <div className="flex items-center justify-center min-h-screen bg-gray-50 p-4">
-            <Card className="w-full max-w-md shadow-lg">
-                <CardHeader className="space-y-1">
-                    <CardTitle className="text-2xl font-bold text-center">Logowanie</CardTitle>
-                    <CardDescription className="text-center">
-                        Wprowadź swoje dane, aby wejść do systemu Campus Gear
-                    </CardDescription>
-                </CardHeader>
-                <CardContent>
+        <div className="flex min-h-svh flex-col items-center justify-center bg-background p-6 md:p-10">
+            <div className="w-full max-w-sm space-y-8">
+
+                {/* Sekcja Nagłówka (bez ramki) */}
+                <div className="flex flex-col items-center space-y-2 text-center">
+                    {/* ZMIEŃ NA TO: */}
+                    <img
+                        src={myLogo}
+                        alt="Logo Campus Gear"
+                        className="h-16 w-auto object-contain drop-shadow-md"
+                    />
+                    <h1 className="mt-4 text-2xl font-bold tracking-tight">
+                        Witaj w Campus Gear
+                    </h1>
+                    <p className="text-sm text-muted-foreground">
+                        Nie masz jeszcze konta?{" "}
+                        <Link to="/register" className="underline underline-offset-4 hover:text-primary text-foreground">
+                            Zarejestruj się
+                        </Link>
+                    </p>
+                </div>
+
+                {/* Sekcja Formularza */}
+                <form onSubmit={handleLogin} className="space-y-6">
                     {errorMsg && (
-                        <div className="bg-red-50 text-red-600 p-3 rounded-md mb-4 text-sm text-center border border-red-200">
+                        <div className="text-sm font-medium text-destructive text-center">
                             {errorMsg}
                         </div>
                     )}
 
-                    <form onSubmit={handleLogin} className="space-y-4">
+                    <div className="space-y-4">
                         <div className="space-y-2">
-                            <Label htmlFor="email">Adres email</Label>
+                            <Label htmlFor="email">Email</Label>
                             <Input
                                 id="email"
                                 type="email"
-                                placeholder="nazwa@campus.edu.pl"
+                                placeholder="m@example.com"
+                                required
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
-                                required
+                                className="bg-white/5 border-white/10 focus:bg-white/10 transition-colors"
                             />
                         </div>
                         <div className="space-y-2">
-                            <Label htmlFor="password">Hasło</Label>
+                            <div className="flex items-center justify-between">
+                                <Label htmlFor="password">Hasło</Label>
+                                <Link to="#" className="text-sm underline-offset-4 hover:underline text-muted-foreground">
+                                    Zapomniałeś hasła?
+                                </Link>
+                            </div>
                             <Input
                                 id="password"
                                 type="password"
+                                required
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
-                                required
+                                className="bg-white/5 border-white/10 focus:bg-white/10 transition-colors"
                             />
                         </div>
-
-                        <Button type="submit" className="w-full bg-blue-600 hover:bg-blue-700">
+                        <Button type="submit" className="w-full">
                             Zaloguj się
                         </Button>
-                    </form>
-
-                    <div className="mt-6 text-center text-sm text-gray-500">
-                        Nie masz jeszcze konta?{' '}
-                        <Link to="/register" className="text-blue-600 font-medium hover:underline">
-                            Zarejestruj się
-                        </Link>
                     </div>
-                </CardContent>
-            </Card>
+                </form>
+            </div>
         </div>
     );
 }

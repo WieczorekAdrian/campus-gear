@@ -1,12 +1,13 @@
 import axios from 'axios';
 
-// Ustawiamy "przechwytywacz" (interceptor) dla każdego wychodzącego zapytania
-axios.interceptors.request.use(
-    (config) => {
-        // Wyciągamy token z pamięci przeglądarki
-        const token = localStorage.getItem('token');
+const instance = axios.create({
+    // Tutaj ewentualnie baseURL, np. baseURL: 'http://localhost:8080'
+});
 
-        // Jeśli token istnieje, doklejamy go do nagłówka
+// Dodajemy tzw. Interceptor, który przed każdym wysłaniem zapytania dokleja token
+instance.interceptors.request.use(
+    (config) => {
+        const token = localStorage.getItem('token');
         if (token) {
             config.headers['Authorization'] = `Bearer ${token}`;
         }
@@ -17,4 +18,4 @@ axios.interceptors.request.use(
     }
 );
 
-export default axios;
+export default instance;

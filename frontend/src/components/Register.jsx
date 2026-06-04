@@ -2,14 +2,19 @@ import React, { useState } from 'react';
 import axios from '../api/axiosConfig';
 import { useNavigate, Link } from 'react-router-dom';
 
+// Pamiętaj o imporcie swojego logo!
+import myLogo from '../assets/logo.png';
+
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+
 function Register() {
-    // Stany dla wszystkich 4 pól, których wymaga Kacper
-    const [email, setEmail] = useState('');
-    const [password, setPassword] = useState('');
     const [firstName, setFirstName] = useState('');
     const [lastName, setLastName] = useState('');
+    const [email, setEmail] = useState('');
+    const [password, setPassword] = useState('');
 
-    // Stany na komunikaty
     const [errorMsg, setErrorMsg] = useState('');
     const [successMsg, setSuccessMsg] = useState('');
 
@@ -17,68 +22,73 @@ function Register() {
 
     const handleRegister = (e) => {
         e.preventDefault();
-
-        // Zbieramy dane do obiektu, dokładnie tak jak chciał backend
         const payload = { email, password, firstName, lastName };
 
         axios.post('/api/auth/register', payload)
             .then(response => {
-                setSuccessMsg('Rejestracja udana! Za 2 sekundy przeniosę Cię do logowania...');
+                setSuccessMsg('Konto utworzone! Przekierowanie do logowania...');
                 setErrorMsg('');
-
-                // Automatyczne przekierowanie do logowania po 2 sekundach
-                setTimeout(() => {
-                    navigate('/login');
-                }, 2000);
+                setTimeout(() => navigate('/login'), 2000);
             })
             .catch(error => {
                 console.error("Błąd rejestracji", error);
-                setErrorMsg('Wystąpił błąd. Upewnij się, że taki email już nie istnieje.');
+                setErrorMsg('Wystąpił błąd. Email może być już zajęty.');
                 setSuccessMsg('');
             });
     };
 
     return (
-        <div className="flex items-center justify-center min-h-screen bg-gray-100">
-            <div className="bg-white p-8 rounded-lg shadow-md w-full max-w-md">
-                <h2 className="text-2xl font-bold text-center text-gray-800 mb-6">Załóż konto</h2>
+        <div className="flex min-h-svh flex-col items-center justify-center bg-background p-6 md:p-10">
+            <div className="w-full max-w-sm space-y-8">
 
-                {errorMsg && <div className="bg-red-100 text-red-700 p-3 rounded mb-4 text-sm text-center">{errorMsg}</div>}
-                {successMsg && <div className="bg-green-100 text-green-700 p-3 rounded mb-4 text-sm text-center">{successMsg}</div>}
-
-                <form onSubmit={handleRegister} className="space-y-4">
-                    <div className="flex space-x-4">
-                        <div className="w-1/2">
-                            <label className="block text-sm font-medium text-gray-700">Imię</label>
-                            <input type="text" required value={firstName} onChange={(e) => setFirstName(e.target.value)}
-                                   className="mt-1 w-full p-2 border border-gray-300 rounded focus:ring focus:ring-blue-200" />
-                        </div>
-                        <div className="w-1/2">
-                            <label className="block text-sm font-medium text-gray-700">Nazwisko</label>
-                            <input type="text" required value={lastName} onChange={(e) => setLastName(e.target.value)}
-                                   className="mt-1 w-full p-2 border border-gray-300 rounded focus:ring focus:ring-blue-200" />
-                        </div>
-                    </div>
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700">Email</label>
-                        <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)}
-                               className="mt-1 w-full p-2 border border-gray-300 rounded focus:ring focus:ring-blue-200" />
-                    </div>
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700">Hasło</label>
-                        <input type="password" required value={password} onChange={(e) => setPassword(e.target.value)}
-                               className="mt-1 w-full p-2 border border-gray-300 rounded focus:ring focus:ring-blue-200" />
-                    </div>
-                    <button type="submit" className="w-full bg-green-600 text-white font-bold py-2 px-4 rounded hover:bg-green-700 transition-colors">
-                        Zarejestruj się
-                    </button>
-                </form>
-
-                {/* Link powrotny do logowania */}
-                <div className="mt-4 text-center">
-                    <span className="text-sm text-gray-600">Masz już konto? </span>
-                    <Link to="/login" className="text-sm text-blue-600 hover:underline">Zaloguj się</Link>
+                {/* Nagłówek z Logo */}
+                <div className="flex flex-col items-center space-y-2 text-center">
+                    <img src={myLogo} alt="Logo Campus Gear" className="h-16 w-auto object-contain drop-shadow-md" />
+                    <h1 className="mt-4 text-2xl font-bold tracking-tight">
+                        Załóż konto
+                    </h1>
+                    <p className="text-sm text-muted-foreground">
+                        Masz już konto?{" "}
+                        <Link to="/login" className="underline underline-offset-4 hover:text-primary text-foreground">
+                            Zaloguj się
+                        </Link>
+                    </p>
                 </div>
+
+                {/* Formularz */}
+                <form onSubmit={handleRegister} className="space-y-6">
+                    {errorMsg && <div className="text-sm font-medium text-destructive text-center">{errorMsg}</div>}
+                    {successMsg && <div className="text-sm font-medium text-green-500 text-center">{successMsg}</div>}
+
+                    <div className="space-y-4">
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="firstName">Imię</Label>
+                                <Input id="firstName" required value={firstName} onChange={(e) => setFirstName(e.target.value)}
+                                       className="bg-white/5 border-white/10 focus:bg-white/10 transition-colors" />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="lastName">Nazwisko</Label>
+                                <Input id="lastName" required value={lastName} onChange={(e) => setLastName(e.target.value)}
+                                       className="bg-white/5 border-white/10 focus:bg-white/10 transition-colors" />
+                            </div>
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="email">Email</Label>
+                            <Input id="email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)}
+                                   className="bg-white/5 border-white/10 focus:bg-white/10 transition-colors" />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="password">Hasło</Label>
+                            <Input id="password" type="password" required value={password} onChange={(e) => setPassword(e.target.value)}
+                                   className="bg-white/5 border-white/10 focus:bg-white/10 transition-colors" />
+                        </div>
+
+                        <Button type="submit" className="w-full">
+                            Zarejestruj się
+                        </Button>
+                    </div>
+                </form>
             </div>
         </div>
     );
