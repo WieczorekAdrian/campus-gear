@@ -40,7 +40,7 @@ class ReservationServiceTest {
         UserEntity user = new UserEntity();
         EquipmentEntity equipment = new EquipmentEntity();
 
-        when(equipmentRepository.findById(1L)).thenReturn(Optional.of(equipment));
+        when(equipmentRepository.findAndLockById(1L)).thenReturn(Optional.of(equipment));
         when(reservationRepository.existsByEquipmentIdAndStartDateLessThanAndEndDateGreaterThan(any(), any(), any()))
                 .thenReturn(false);
 
@@ -71,7 +71,7 @@ class ReservationServiceTest {
         LocalDateTime end = LocalDateTime.now().plusDays(2);
         ReservationRequestDTO dto = new ReservationRequestDTO(1L, start, end);
 
-        when(equipmentRepository.findById(1L)).thenReturn(Optional.of(new EquipmentEntity()));
+        when(equipmentRepository.findAndLockById(1L)).thenReturn(Optional.of(new EquipmentEntity()));
         when(reservationRepository.existsByEquipmentIdAndStartDateLessThanAndEndDateGreaterThan(any(), any(), any()))
                 .thenReturn(true); // Sprzęt zajęty!
 
@@ -91,7 +91,7 @@ class ReservationServiceTest {
         LocalDateTime end = LocalDateTime.now().plusDays(5); // Próba na 5 dni
         ReservationRequestDTO dto = new ReservationRequestDTO(1L, start, end);
 
-        when(equipmentRepository.findById(1L)).thenReturn(Optional.of(equipment));
+        when(equipmentRepository.findAndLockById(1L)).thenReturn(Optional.of(equipment));
 
         // When & Then
         assertThatThrownBy(() -> reservationService.createReservation(dto, new UserEntity()))

@@ -9,6 +9,7 @@ import com.campusgear.demo.repository.ReservationEntityRepository;
 import com.campusgear.demo.status.ReservationStatus;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.temporal.ChronoUnit;
 
@@ -18,6 +19,7 @@ public class ReservationService {
     private final ReservationEntityRepository reservationRepository;
     private final EquipmentEntityRepository equipmentRepository;
 
+    @Transactional
     public void createReservation(ReservationRequestDTO dto, UserEntity user) {
         // 1. Walidacja czasów - PIERWSZA! (nie wymaga bazy danych)
         if (dto.startDate().isAfter(dto.endDate())) {
@@ -26,7 +28,7 @@ public class ReservationService {
 
 
         // 2. Dopiero teraz szukamy sprzętu
-        EquipmentEntity equipment = equipmentRepository.findById(dto.equipmentId())
+        EquipmentEntity equipment = equipmentRepository.findAndLockById(dto.equipmentId())
                 .orElseThrow(() -> new RuntimeException("Sprzęt o ID " + dto.equipmentId() + " nie istnieje!"));
 
         long daysRequested = ChronoUnit.DAYS.between(dto.startDate(), dto.endDate());
