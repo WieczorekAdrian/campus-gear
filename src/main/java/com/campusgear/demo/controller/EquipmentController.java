@@ -4,7 +4,11 @@ import com.campusgear.demo.dto.EquipmentRequestDTO;
 import com.campusgear.demo.dto.EquipmentResponseDTO;
 import com.campusgear.demo.entity.EquipmentEntity;
 import com.campusgear.demo.repository.EquipmentEntityRepository;
+import com.campusgear.demo.service.EquipmentService;
+import com.campusgear.demo.status.EquipmentStatus;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -63,6 +67,5 @@ public class EquipmentController {
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void deleteEquipment(@PathVariable Long id) {
         equipmentEntityRepository.deleteById(id);
-        return ResponseEntity.noContent().build(); // Zwracamy kod 204 (NO CONTENT) - standard przy usuwaniu
     }
 }
