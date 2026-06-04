@@ -1,8 +1,14 @@
 package com.campusgear.demo.controller;
 
+import com.campusgear.demo.dto.EquipmentRequestDTO;
+import com.campusgear.demo.dto.EquipmentResponseDTO;
 import com.campusgear.demo.entity.EquipmentEntity;
-import com.campusgear.demo.status.EquipmentStatus;
 import com.campusgear.demo.repository.EquipmentEntityRepository;
+import com.campusgear.demo.service.EquipmentService;
+import com.campusgear.demo.status.EquipmentStatus;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -12,59 +18,57 @@ import java.util.List;
 public class EquipmentController {
 
     private final EquipmentEntityRepository equipmentEntityRepository;
+    private final EquipmentService equipmentService; // Dodajemy nasz serwis!
 
-    // Wstrzykiwanie zależności z nową nazwą repozytorium
-    public EquipmentController(EquipmentEntityRepository equipmentEntityRepository) {
+    public EquipmentController(EquipmentEntityRepository equipmentEntityRepository, EquipmentService equipmentService) {
         this.equipmentEntityRepository = equipmentEntityRepository;
+        this.equipmentService = equipmentService;
     }
 
-    // Endpoint do POBIERANIA wszystkich sprzętów
+    // --- METODY DO ODCZYTU (Dostępne dla wszystkich) ---
+
     @GetMapping
     public List<EquipmentEntity> getAllEquipment() {
         return equipmentEntityRepository.findAll();
     }
 
-    // Endpoint do DODAWANIA nowego sprzętu
+    @GetMapping("/search")
+    public List<EquipmentEntity> searchEquipment(
+            @RequestParam(required = false) EquipmentStatus status,
+            @RequestParam(required = false) String deviceType) {
+
+        if (status != null && deviceType != null) {
+            return equipmentEntityRepository.findByStatusAndDeviceType(status, deviceType);
+        } else if (status != null) {
+            return equipmentEntityRepository.findByStatus(status);
+        } else if (deviceType != null) {
+            return equipmentEntityRepository.findByDeviceType(deviceType);
+        }
+
+        return equipmentEntityRepository.findAll();
+    }
+
+    // --- METODY MODYFIKUJĄCE (Tylko dla Opiekuna) ---
+
     @PostMapping
-    public EquipmentEntity addEquipment(@RequestBody EquipmentEntity equipment) {
-        return equipmentEntityRepository.save(equipment);
+    @PreAuthorize("hasRole('OPIEKUN')") // Zabezpieczenie: tylko ta rola ma dostęp
+    public ResponseEntity<EquipmentResponseDTO> addEquipment(@RequestBody EquipmentRequestDTO equipment) {
+        EquipmentResponseDTO response = equipmentService.addEquipment(equipment);
+        // Zwracamy kod 201 (CREATED) zamiast domyślnego 200 (OK) - bardzo profesjonalna praktyka!
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
-    // Endpoint do EDYCJI sprzętu (Żądanie PUT)
     @PutMapping("/{id}")
-    public EquipmentEntity updateEquipment(@PathVariable Long id, @RequestBody EquipmentEntity updatedEquipment) {
-        return equipmentEntityRepository.findById(id)
-                .map(equipment -> {
-                    // Aktualizujemy dane znalezionego sprzętu nowymi wartościami
-                    equipment.setDeviceType(updatedEquipment.getDeviceType());
-                    equipment.setTechnicalSpecification(updatedEquipment.getTechnicalSpecification());
-                    equipment.setSerialNumber(updatedEquipment.getSerialNumber());
-                    equipment.setLocation(updatedEquipment.getLocation());
-                    equipment.setStatus(updatedEquipment.getStatus());
-                    // Zapisujemy zaktualizowany obiekt do bazy
-                    return equipmentEntityRepository.save(equipment);
-                })
-                .orElseThrow(() -> new RuntimeException("Nie znaleziono sprzętu o ID: " + id));
+    @PreAuthorize("hasRole('OPIEKUN')") // Zabezpieczenie: tylko ta rola ma dostęp
+    public ResponseEntity<EquipmentResponseDTO> updateEquipment(@PathVariable Long id, @RequestBody EquipmentRequestDTO updatedEquipment) {
+        EquipmentResponseDTO response = equipmentService.updateEquipment(id, updatedEquipment);
+        return ResponseEntity.ok(response); // Zwracamy kod 200 (OK)
     }
 
-    // Endpoint do USUWANIA sprzętu (Żądanie DELETE)
     @DeleteMapping("/{id}")
-    public void deleteEquipment(@PathVariable Long id) {
+    @PreAuthorize("hasRole('OPIEKUN')") // Warto od razu zabezpieczyć też usuwanie!
+    public ResponseEntity<Void> deleteEquipment(@PathVariable Long id) {
         equipmentEntityRepository.deleteById(id);
+        return ResponseEntity.noContent().build(); // Zwracamy kod 204 (NO CONTENT) - standard przy usuwaniu
     }
-
-    // Endpoint do WYSZUKIWANIA sprzętu po statusie (Żądanie GET)
-    // Przykład: http://localhost:8080/api/equipment/search/status?value=DOSTĘPNY
-    @GetMapping("/search/status")
-    public List<EquipmentEntity> getEquipmentByStatus(@RequestParam EquipmentStatus value) {
-        return equipmentEntityRepository.findByStatus(value);
-    }
-
-    // Endpoint do WYSZUKIWANIA sprzętu po typie (Żądanie GET)
-    // Przykład: http://localhost:8080/api/equipment/search/type?value=Laptop
-    @GetMapping("/search/type")
-    public List<EquipmentEntity> getEquipmentByType(@RequestParam String value) {
-        return equipmentEntityRepository.findByDeviceType(value);
-    }
-
 }
