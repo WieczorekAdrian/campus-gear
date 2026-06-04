@@ -10,6 +10,8 @@ import com.campusgear.demo.status.ReservationStatus;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.time.temporal.ChronoUnit;
+
 @Service
 @RequiredArgsConstructor
 public class ReservationService {
@@ -22,14 +24,23 @@ public class ReservationService {
             throw new RuntimeException("Data startu nie może być po dacie końca!");
         }
 
+
         // 2. Dopiero teraz szukamy sprzętu
         EquipmentEntity equipment = equipmentRepository.findById(dto.equipmentId())
                 .orElseThrow(() -> new RuntimeException("Sprzęt o ID " + dto.equipmentId() + " nie istnieje!"));
 
-        // 3. Walidacja zajętości
+        long daysRequested = ChronoUnit.DAYS.between(dto.startDate(), dto.endDate());
+
+
         boolean isOccupied = reservationRepository.existsByEquipmentIdAndStartDateLessThanAndEndDateGreaterThan(
                 dto.equipmentId(), dto.endDate(), dto.startDate()
         );
+
+// 2. Walidacja limitu (tylko jeśli limit jest ustawiony)
+        if (equipment.getMaxRentalDays() != null && daysRequested > equipment.getMaxRentalDays()) {
+            throw new RuntimeException("Nie można wypożyczyć sprzętu na dłużej niż "
+                    + equipment.getMaxRentalDays() + " dni.");
+        }
 
         if (isOccupied) {
             throw new RuntimeException("Ten sprzęt jest już zarezerwowany w tym terminie.");

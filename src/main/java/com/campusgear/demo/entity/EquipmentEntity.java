@@ -27,4 +27,6 @@ public class EquipmentEntity {
     private EquipmentStatus status;
     private boolean isAcademicAccount;
 
+    private Integer maxRentalDays;
+
 }

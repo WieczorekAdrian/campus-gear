@@ -80,4 +80,22 @@ class ReservationServiceTest {
                 .isInstanceOf(RuntimeException.class)
                 .hasMessage("Ten sprzęt jest już zarezerwowany w tym terminie.");
     }
+
+    @Test
+    void shouldThrowExceptionWhenRentalExceedsLimit() {
+        // Given
+        EquipmentEntity equipment = new EquipmentEntity();
+        equipment.setMaxRentalDays(3); // Limit na 3 dni
+
+        LocalDateTime start = LocalDateTime.now();
+        LocalDateTime end = LocalDateTime.now().plusDays(5); // Próba na 5 dni
+        ReservationRequestDTO dto = new ReservationRequestDTO(1L, start, end);
+
+        when(equipmentRepository.findById(1L)).thenReturn(Optional.of(equipment));
+
+        // When & Then
+        assertThatThrownBy(() -> reservationService.createReservation(dto, new UserEntity()))
+                .isInstanceOf(RuntimeException.class)
+                .hasMessageContaining("Nie można wypożyczyć sprzętu na dłużej niż 3 dni.");
+    }
 }
