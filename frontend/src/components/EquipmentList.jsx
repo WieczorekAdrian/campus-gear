@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import axios from '../api/axiosConfig';
 
 function EquipmentList() {
     const [equipment, setEquipment] = useState([]);
