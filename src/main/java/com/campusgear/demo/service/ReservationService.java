@@ -7,10 +7,12 @@ import com.campusgear.demo.entity.UserEntity;
 import com.campusgear.demo.repository.EquipmentEntityRepository;
 import com.campusgear.demo.repository.ReservationEntityRepository;
 import com.campusgear.demo.status.ReservationStatus;
+import com.campusgear.demo.status.Role;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 
 @Service
@@ -58,6 +60,36 @@ public class ReservationService {
 
         reservation.setEquipment(equipment);
 
+        reservationRepository.save(reservation);
+    }
+
+    @Transactional
+    public void cancelReservation(Long reservationId, UserEntity user) {
+        ReservationEntity reservation = reservationRepository.findById(reservationId)
+                .orElseThrow(() -> new IllegalArgumentException("Rezerwacja o ID " + reservationId + " nie istnieje!"));
+
+        // Sprawdzenie roli i uprawnień właściciela
+        boolean isOwner = reservation.getUser().getId().equals(user.getId());
+        boolean hasPrivilegedRole = user.getRole() == Role.ROLE_OPIEKUN || user.getRole() == Role.ROLE_ADMIN;
+        if (!isOwner && !hasPrivilegedRole) {
+            throw new IllegalArgumentException("Nie masz uprawnień do anulowania tej rezerwacji!");
+        }
+
+        // Sprawdzenie czy rezerwacja już się nie rozpoczęła
+        if (LocalDateTime.now().isAfter(reservation.getStartDate())) {
+            throw new IllegalArgumentException("Nie można anulować rezerwacji po jej rozpoczęciu!");
+        }
+
+        // Sprawdzenie statusu
+        if (reservation.getStatus() == ReservationStatus.ANULOWANA) {
+            throw new IllegalArgumentException("Ta rezerwacja jest już anulowana!");
+        }
+        if (reservation.getStatus() == ReservationStatus.ZAKONCZONA) {
+            throw new IllegalArgumentException("Ta rezerwacja jest już zakończona i nie można jej anulować!");
+        }
+
+        // Zmiana statusu
+        reservation.setStatus(ReservationStatus.ANULOWANA);
         reservationRepository.save(reservation);
     }
 }

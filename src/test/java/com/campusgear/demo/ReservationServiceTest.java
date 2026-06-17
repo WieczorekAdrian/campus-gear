@@ -6,6 +6,9 @@ import com.campusgear.demo.entity.UserEntity;
 import com.campusgear.demo.repository.EquipmentEntityRepository;
 import com.campusgear.demo.repository.ReservationEntityRepository;
 import com.campusgear.demo.service.ReservationService;
+import com.campusgear.demo.entity.ReservationEntity;
+import com.campusgear.demo.status.ReservationStatus;
+import com.campusgear.demo.status.Role;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -97,5 +100,122 @@ class ReservationServiceTest {
         assertThatThrownBy(() -> reservationService.createReservation(dto, new UserEntity()))
                 .isInstanceOf(RuntimeException.class)
                 .hasMessageContaining("Nie można wypożyczyć sprzętu na dłużej niż 3 dni.");
+    }
+
+    @Test
+    void shouldCancelReservationSuccessfullyByOwner() {
+        // Given
+        UserEntity owner = new UserEntity();
+        owner.setId(1L);
+        owner.setRole(Role.ROLE_STUDENT);
+
+        ReservationEntity reservation = new ReservationEntity();
+        reservation.setId(10L);
+        reservation.setUser(owner);
+        reservation.setStartDate(LocalDateTime.now().plusDays(1));
+        reservation.setStatus(ReservationStatus.AKTYWNA);
+
+        when(reservationRepository.findById(10L)).thenReturn(Optional.of(reservation));
+
+        // When
+        reservationService.cancelReservation(10L, owner);
+
+        // Then
+        verify(reservationRepository, times(1)).save(reservation);
+        org.assertj.core.api.Assertions.assertThat(reservation.getStatus()).isEqualTo(ReservationStatus.ANULOWANA);
+    }
+
+    @Test
+    void shouldCancelReservationSuccessfullyByOpiekun() {
+        // Given
+        UserEntity owner = new UserEntity();
+        owner.setId(1L);
+        owner.setRole(Role.ROLE_STUDENT);
+
+        UserEntity opiekun = new UserEntity();
+        opiekun.setId(2L);
+        opiekun.setRole(Role.ROLE_OPIEKUN);
+
+        ReservationEntity reservation = new ReservationEntity();
+        reservation.setId(10L);
+        reservation.setUser(owner);
+        reservation.setStartDate(LocalDateTime.now().plusDays(1));
+        reservation.setStatus(ReservationStatus.AKTYWNA);
+
+        when(reservationRepository.findById(10L)).thenReturn(Optional.of(reservation));
+
+        // When
+        reservationService.cancelReservation(10L, opiekun);
+
+        // Then
+        verify(reservationRepository, times(1)).save(reservation);
+        org.assertj.core.api.Assertions.assertThat(reservation.getStatus()).isEqualTo(ReservationStatus.ANULOWANA);
+    }
+
+    @Test
+    void shouldThrowExceptionWhenCancellingByNonOwner() {
+        // Given
+        UserEntity owner = new UserEntity();
+        owner.setId(1L);
+        owner.setRole(Role.ROLE_STUDENT);
+
+        UserEntity otherUser = new UserEntity();
+        otherUser.setId(2L);
+        otherUser.setRole(Role.ROLE_STUDENT);
+
+        ReservationEntity reservation = new ReservationEntity();
+        reservation.setId(10L);
+        reservation.setUser(owner);
+        reservation.setStartDate(LocalDateTime.now().plusDays(1));
+        reservation.setStatus(ReservationStatus.AKTYWNA);
+
+        when(reservationRepository.findById(10L)).thenReturn(Optional.of(reservation));
+
+        // When & Then
+        assertThatThrownBy(() -> reservationService.cancelReservation(10L, otherUser))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("Nie masz uprawnień do anulowania tej rezerwacji!");
+    }
+
+    @Test
+    void shouldThrowExceptionWhenCancellingAfterStartDate() {
+        // Given
+        UserEntity owner = new UserEntity();
+        owner.setId(1L);
+        owner.setRole(Role.ROLE_STUDENT);
+
+        ReservationEntity reservation = new ReservationEntity();
+        reservation.setId(10L);
+        reservation.setUser(owner);
+        reservation.setStartDate(LocalDateTime.now().minusDays(1)); // Rozpoczęła się wczoraj!
+        reservation.setStatus(ReservationStatus.AKTYWNA);
+
+        when(reservationRepository.findById(10L)).thenReturn(Optional.of(reservation));
+
+        // When & Then
+        assertThatThrownBy(() -> reservationService.cancelReservation(10L, owner))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("Nie można anulować rezerwacji po jej rozpoczęciu!");
+    }
+
+    @Test
+    void shouldThrowExceptionWhenReservationAlreadyCancelledOrFinished() {
+        // Given
+        UserEntity owner = new UserEntity();
+        owner.setId(1L);
+        owner.setRole(Role.ROLE_STUDENT);
+
+        ReservationEntity cancelledReservation = new ReservationEntity();
+        cancelledReservation.setId(10L);
+        cancelledReservation.setUser(owner);
+        cancelledReservation.setStartDate(LocalDateTime.now().plusDays(1));
+        cancelledReservation.setStatus(ReservationStatus.ANULOWANA);
+
+        when(reservationRepository.findById(10L)).thenReturn(Optional.of(cancelledReservation));
+
+        // When & Then
+        assertThatThrownBy(() -> reservationService.cancelReservation(10L, owner))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("Ta rezerwacja jest już anulowana!");
     }
 }
