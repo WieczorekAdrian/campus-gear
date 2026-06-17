@@ -1,5 +1,7 @@
 package com.campusgear.demo.config;
 
+import com.campusgear.demo.entity.UserEntity;
+import com.campusgear.demo.repository.UserEntityRepository;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -15,9 +17,11 @@ import java.io.IOException;
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtTokenProvider tokenProvider;
+    private final UserEntityRepository userRepository;
 
-    public JwtAuthenticationFilter(JwtTokenProvider tokenProvider) {
+    public JwtAuthenticationFilter(JwtTokenProvider tokenProvider, UserEntityRepository userRepository) {
         this.tokenProvider = tokenProvider;
+        this.userRepository = userRepository;
     }
 
     @Override
@@ -29,16 +33,17 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
             if (StringUtils.hasText(jwt) && tokenProvider.validateToken(jwt)) {
                 String username = tokenProvider.getUsernameFromJWT(jwt);
-                String roles = tokenProvider.getRolesFromJWT(jwt); // Wyciągamy role z JWT
+                
+                // Ładujemy pełnego użytkownika z bazy, aby @AuthenticationPrincipal nie był null
+                UserEntity user = userRepository.findByEmail(username).orElse(null);
 
+                if (user != null) {
+                    UsernamePasswordAuthenticationToken authentication =
+                            new UsernamePasswordAuthenticationToken(user, null, user.getAuthorities());
 
-                var authorities = AuthorityUtils.commaSeparatedStringToAuthorityList(roles);
-
-                UsernamePasswordAuthenticationToken authentication =
-                        new UsernamePasswordAuthenticationToken(username, null, authorities);
-
-                // Informujemy Spring Security, kto właśnie wykonuje akcję
-                SecurityContextHolder.getContext().setAuthentication(authentication);
+                    // Informujemy Spring Security, kto właśnie wykonuje akcję
+                    SecurityContextHolder.getContext().setAuthentication(authentication);
+                }
             }
         } catch (Exception ex) {
             logger.error("Nie udało się ustawić autentykacji użytkownika", ex);
