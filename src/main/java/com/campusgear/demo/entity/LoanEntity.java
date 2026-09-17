@@ -16,7 +16,8 @@ public class LoanEntity {
 
     private LocalDateTime borrowDate;
     private LocalDateTime expectedReturnDate;
-    private LocalDateTime actualReturnDate; // Nullable, dopóki sprzęt nie wróci
+    private LocalDateTime returnRequestedAt; // Nullable, dopóki user nie kliknie "Zwróć"
+    private LocalDateTime actualReturnDate; // Nullable, dopóki opiekun nie potwierdzi odbioru
 
     @ManyToOne
     @JoinColumn(name = "user_id", nullable = false)

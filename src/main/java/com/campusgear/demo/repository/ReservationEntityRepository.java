@@ -16,11 +16,11 @@ public interface ReservationEntityRepository extends JpaRepository<ReservationEn
             LocalDateTime startDate
     );
 
-    boolean existsByEquipmentIdAndStartDateLessThanAndEndDateGreaterThanAndStatus(
+    boolean existsByEquipmentIdAndStartDateLessThanAndEndDateGreaterThanAndStatusIn(
             Long equipmentId,
             LocalDateTime endDate,
             LocalDateTime startDate,
-            ReservationStatus status
+            java.util.Collection<ReservationStatus> statuses
     );
 
     @EntityGraph(attributePaths = "equipment")
@@ -28,5 +28,11 @@ public interface ReservationEntityRepository extends JpaRepository<ReservationEn
 
     @EntityGraph(attributePaths = "equipment")
     List<ReservationEntity> findByUser_EmailAndStatusOrderByStartDateDesc(String email, ReservationStatus status);
+
+    @EntityGraph(attributePaths = {"equipment", "user"})
+    List<ReservationEntity> findByStatusOrderByStartDateDesc(ReservationStatus status);
+
+    @EntityGraph(attributePaths = {"equipment", "user"})
+    List<ReservationEntity> findAllByOrderByStartDateDesc();
 
 }

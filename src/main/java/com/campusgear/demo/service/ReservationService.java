@@ -55,8 +55,9 @@ public class ReservationService {
         }
 
         boolean isOccupied = reservationRepository
-                .existsByEquipmentIdAndStartDateLessThanAndEndDateGreaterThanAndStatus(
-                        dto.equipmentId(), dto.endDate(), dto.startDate(), ReservationStatus.AKTYWNA);
+                .existsByEquipmentIdAndStartDateLessThanAndEndDateGreaterThanAndStatusIn(
+                        dto.equipmentId(), dto.endDate(), dto.startDate(),
+                        java.util.List.of(ReservationStatus.AKTYWNA, ReservationStatus.WYPOZYCZONA));
 
         if (isOccupied) {
             throw new ReservationConflictException("Ten sprzęt jest już zarezerwowany w tym terminie.");
@@ -119,6 +120,15 @@ public class ReservationService {
         return reservations.stream().map(this::toDto).toList();
     }
 
+    @Transactional(readOnly = true)
+    public List<ReservationResponseDTO> getAllReservations(ReservationStatus status) {
+        List<ReservationEntity> reservations = (status == null)
+                ? reservationRepository.findAllByOrderByStartDateDesc()
+                : reservationRepository.findByStatusOrderByStartDateDesc(status);
+
+        return reservations.stream().map(this::toDto).toList();
+    }
+
     private ReservationResponseDTO toDto(ReservationEntity reservation) {
         EquipmentEntity equipment = reservation.getEquipment();
         ReservationResponseDTO.EquipmentSummaryDTO equipmentDto = null;
@@ -136,6 +146,7 @@ public class ReservationService {
                 reservation.getStartDate(),
                 reservation.getEndDate(),
                 reservation.getStatus(),
+                reservation.getUser() != null ? reservation.getUser().getEmail() : null,
                 equipmentDto
         );
     }
