@@ -22,10 +22,19 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenProvider tokenProvider;
 
+    public static final String ACADEMIC_DOMAIN = "@campus.edu.pl";
+
     /**
-     * Rejestracja nowego użytkownika (domyślnie z rolą ROLE_STUDENT)
+     * Rejestracja nowego użytkownika (domyślnie z rolą ROLE_STUDENT).
+     * Działa tylko dla maili z domeny uczelnianej - SSO (Microsoft) odrzucone,
+     * więc domena jest egzekwowana tutaj i w RegisterDto.
      */
     public void register(RegisterDto dto) {
+        // 0. Twarda walidacja domeny (obrona w głąb, gdyby ktoś ominął @Valid)
+        if (dto.email() == null || !dto.email().toLowerCase().endsWith(ACADEMIC_DOMAIN)) {
+            throw new IllegalArgumentException("Registration allowed only for academic emails (" + ACADEMIC_DOMAIN + ").");
+        }
+
         // 1. Sprawdzamy, czy email jest już zajęty
         if (userRepository.existsByEmail(dto.email())) {
             throw new IllegalArgumentException("User with this email already exists.");

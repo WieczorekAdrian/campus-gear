@@ -2,11 +2,14 @@ package com.campusgear.demo.dto;
 
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
 public record RegisterDto(
         @NotBlank(message = "Email cannot be empty")
         @Email(message = "Invalid email format")
+        @Pattern(regexp = "^[^@\\s]+@campus\\.edu\\.pl$", flags = Pattern.Flag.CASE_INSENSITIVE,
+                message = "Email must belong to the academic domain (@campus.edu.pl)")
         String email,
 
         @NotBlank(message = "Password cannot be empty")

@@ -26,26 +26,19 @@ public class EquipmentController {
     }
 
     // --- METODY DO ODCZYTU (Dostępne dla wszystkich) ---
+    // Zwracamy DTO (bez listy rezerwacji), żeby nie zapętlać JSON encja<->rezerwacje.
 
     @GetMapping
-    public List<EquipmentEntity> getAllEquipment() {
-        return equipmentEntityRepository.findAll();
+    public List<EquipmentResponseDTO> getAllEquipment() {
+        return equipmentService.getAllEquipment();
     }
 
     @GetMapping("/search")
-    public List<EquipmentEntity> searchEquipment(
+    public List<EquipmentResponseDTO> searchEquipment(
             @RequestParam(required = false) EquipmentStatus status,
             @RequestParam(required = false) String deviceType) {
 
-        if (status != null && deviceType != null) {
-            return equipmentEntityRepository.findByStatusAndDeviceType(status, deviceType);
-        } else if (status != null) {
-            return equipmentEntityRepository.findByStatus(status);
-        } else if (deviceType != null) {
-            return equipmentEntityRepository.findByDeviceType(deviceType);
-        }
-
-        return equipmentEntityRepository.findAll();
+        return equipmentService.searchEquipment(status, deviceType);
     }
 
     // --- METODY MODYFIKUJĄCE (Tylko dla Opiekuna) ---

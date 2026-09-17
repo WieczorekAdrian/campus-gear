@@ -77,7 +77,7 @@ function Login() {
                             <Input
                                 id="email"
                                 type="email"
-                                placeholder="m@example.com"
+                                placeholder="jan.kowalski@campus.edu.pl"
                                 required
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}

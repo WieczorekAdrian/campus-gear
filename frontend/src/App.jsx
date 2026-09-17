@@ -1,10 +1,19 @@
-import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, Outlet, Link } from 'react-router-dom';
 
 // Importy Twoich komponentów
 import EquipmentList from './components/EquipmentList';
+import RentalsList from './components/RentalsList';
+import Profile from './components/Profile';
 import Login from './components/Login';
 import Register from './components/Register';
+
+function RequireAuth({ children }) {
+    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+    if (!token) {
+        return <Navigate to="/login" replace />;
+    }
+    return children;
+}
 
 // 1. Główny układ aplikacji (Layout) dla zalogowanych
 function MainLayout() {
@@ -32,10 +41,6 @@ function MainLayout() {
     );
 }
 
-// 2. Tymczasowe komponenty dla nowych podstron (żeby aplikacja się nie psuła po kliknięciu w menu)
-const PlaceholderRentals = () => <div className="text-center text-muted-foreground mt-20">Strona Moje Wypożyczenia - w budowie 🚧</div>;
-const PlaceholderProfile = () => <div className="text-center text-muted-foreground mt-20">Strona Profilu - w budowie 🚧</div>;
-
 // 3. Główny komponent App spinający wszystko w całość
 function App() {
     return (
@@ -47,10 +52,10 @@ function App() {
                 <Route path="/register" element={<Register />} />
 
                 {/* GRUPA 2: Trasy chronione (Korzystające z MainLayout, Z paskiem nawigacji) */}
-                <Route element={<MainLayout />}>
+                <Route element={<RequireAuth><MainLayout /></RequireAuth>}>
                     <Route path="/equipment" element={<EquipmentList />} />
-                    <Route path="/rentals" element={<PlaceholderRentals />} />
-                    <Route path="/profile" element={<PlaceholderProfile />} />
+                    <Route path="/rentals" element={<RentalsList />} />
+                    <Route path="/profile" element={<Profile />} />
                 </Route>
             </Routes>
         </Router>
