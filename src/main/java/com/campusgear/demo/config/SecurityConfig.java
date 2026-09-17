@@ -2,7 +2,6 @@ package com.campusgear.demo.config;
 
 import com.campusgear.demo.config.JwtAuthenticationFilter;
 import com.campusgear.demo.config.JwtTokenProvider;
-import lombok.AllArgsConstructor;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
