@@ -1,26 +1,30 @@
 import { useEffect, useState } from 'react';
 import axios from '../api/axiosConfig';
+import ReturnDialog from './ReturnDialog';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 
 function extractErrorMessage(error, fallback) {
     return error?.response?.data?.detail || error?.response?.data?.message || fallback;
 }
 
-function RentalsList() {
+function OpiekunPanel() {
     const [reservations, setReservations] = useState([]);
     const [loans, setLoans] = useState([]);
     const [loading, setLoading] = useState(true);
     const [errorMsg, setErrorMsg] = useState('');
     const [successMsg, setSuccessMsg] = useState('');
-    const [tab, setTab] = useState('AKTYWNA');
+    const [tab, setTab] = useState('ACTIVE');
     const [busyId, setBusyId] = useState(null);
+    const [returnTarget, setReturnTarget] = useState(null);
 
-    const fetchMine = () => {
+    const fetchAll = () => {
         setLoading(true);
         setErrorMsg('');
         Promise.all([
-            axios.get('/api/reservations/mine'),
-            axios.get('/api/loans/mine'),
+            axios.get('/api/reservations'),
+            axios.get('/api/loans', { params: { activeOnly: false } }),
         ])
             .then(([resRes, resLoans]) => {
                 setReservations(Array.isArray(resRes.data) ? resRes.data : []);
@@ -28,57 +32,86 @@ function RentalsList() {
                 setLoading(false);
             })
             .catch(error => {
-                console.error('Błąd pobierania wypożyczeń', error);
-                setErrorMsg(extractErrorMessage(error, 'Nie udało się pobrać danych.'));
+                console.error('Błąd pobierania panelu', error);
+                setErrorMsg(extractErrorMessage(error, 'Nie udało się pobrać danych panelu.'));
                 setLoading(false);
             });
     };
 
     useEffect(() => {
-        fetchMine();
+        fetchAll();
     }, []);
 
     const visibleReservations = tab === 'ALL'
         ? reservations
-        : reservations.filter(r => r.status === tab);
+        : reservations.filter(r => r.status === 'AKTYWNA');
+    // W zakładce Aktywne wypożyczenia pokazujemy TYLKO zgłoszone do odbioru.
+    // Odbierz pojawia się dopiero jak użytkownik kliknie Zwróć.
     const visibleLoans = tab === 'ALL'
         ? loans
-        : loans.filter(l => (tab === 'AKTYWNA' ? l.actualReturnDate == null : l.actualReturnDate != null));
+        : loans.filter(l => l.actualReturnDate == null && l.returnRequestedAt != null);
 
-    const runAction = (key, fn) => {
+    const runAction = (key, fn, okMsg) => {
         setBusyId(key);
         setErrorMsg('');
         setSuccessMsg('');
         fn()
-            .then(() => fetchMine())
+            .then(() => {
+                if (okMsg) setSuccessMsg(okMsg);
+                fetchAll();
+            })
             .catch(error => {
-                console.error('Błąd akcji', error);
+                console.error('Błąd akcji opiekuna', error);
                 setErrorMsg(extractErrorMessage(error, 'Operacja nie powiodła się.'));
             })
             .finally(() => setBusyId(null));
     };
 
-    const cancel = (id) => runAction(`cancel-${id}`, () => axios.patch(`/api/reservations/${id}/cancel`));
-    const requestReturn = (id) => runAction(`return-${id}`,
-        () => axios.patch(`/api/loans/${id}/request-return`)
-            .then(() => setSuccessMsg('Zwrot zgłoszony. Opiekun potwierdzi odbiór sprzętu.')));
+    const issue = (id) => runAction(`issue-${id}`,
+        () => axios.post('/api/loans', { reservationId: id }), 'Sprzęt wydany.');
+    const cancel = (id) => runAction(`cancel-${id}`,
+        () => axios.patch(`/api/reservations/${id}/cancel`));
+    const confirmReturn = (damaged, damageDescription) => {
+        if (!returnTarget) return;
+        const { id } = returnTarget;
+        runAction(`return-${id}`,
+            () => axios.patch(`/api/loans/${id}/confirm-return`, { damaged, damageDescription })
+                .then(() => {
+                    setSuccessMsg(damaged ? 'Sprzęt zwrócony i zgłoszony do serwisu.' : 'Zwrot odebrany.');
+                    setReturnTarget(null);
+                }));
+    };
 
-    const tabBtn = (value, label) => (
-        <button
-            onClick={() => setTab(value)}
-            className={`px-4 py-2 rounded-md text-sm font-medium ${tab === value ? 'bg-primary text-primary-foreground' : 'border border-white/10 text-muted-foreground'}`}
+    const actionBtn = (key, label, fn, variant = 'default') => (
+        <Button
+            size="sm"
+            variant={variant}
+            disabled={busyId === key}
+            onClick={fn}
         >
-            {label}
-        </button>
+            {busyId === key ? '...' : label}
+        </Button>
     );
 
     return (
-        <div className="max-w-7xl mx-auto mt-8 space-y-10">
+        <div className="max-w-7xl mx-auto mt-8 space-y-8">
             <div className="flex justify-between items-center">
-                <h2 className="text-2xl font-bold tracking-tight text-foreground">Moje wypożyczenia</h2>
+                <h2 className="text-2xl font-bold tracking-tight text-foreground">Panel opiekuna</h2>
                 <div className="flex gap-2">
-                    {tabBtn('AKTYWNA', 'Aktywne')}
-                    {tabBtn('ALL', 'Historia')}
+                    <Button
+                        size="sm"
+                        variant={tab === 'ACTIVE' ? 'default' : 'outline'}
+                        onClick={() => setTab('ACTIVE')}
+                    >
+                        Aktywne
+                    </Button>
+                    <Button
+                        size="sm"
+                        variant={tab === 'ALL' ? 'default' : 'outline'}
+                        onClick={() => setTab('ALL')}
+                    >
+                        Historia
+                    </Button>
                 </div>
             </div>
 
@@ -93,17 +126,19 @@ function RentalsList() {
                 <div className="text-center text-muted-foreground py-10">Ładowanie danych...</div>
             ) : (
                 <>
-                    <section>
-                        <h3 className="text-lg font-semibold mb-3">Rezerwacje</h3>
-                        <div className="rounded-md border border-white/10 overflow-x-auto bg-white/5 backdrop-blur-sm shadow-xl">
+                    <Card className="bg-white/5 border-white/10">
+                        <CardHeader>
+                            <CardTitle>Rezerwacje ({visibleReservations.length})</CardTitle>
+                        </CardHeader>
+                        <CardContent className="overflow-x-auto p-0">
                             <table className="w-full text-sm text-left text-foreground whitespace-nowrap">
                                 <thead className="text-xs uppercase bg-black/20 text-muted-foreground border-b border-white/10">
                                 <tr>
                                     <th scope="col" className="px-6 py-4 font-medium tracking-wider">ID</th>
+                                    <th scope="col" className="px-6 py-4 font-medium tracking-wider">Użytkownik</th>
                                     <th scope="col" className="px-6 py-4 font-medium tracking-wider">Sprzęt</th>
                                     <th scope="col" className="px-6 py-4 font-medium tracking-wider">S/N</th>
-                                    <th scope="col" className="px-6 py-4 font-medium tracking-wider">Start</th>
-                                    <th scope="col" className="px-6 py-4 font-medium tracking-wider">Koniec</th>
+                                    <th scope="col" className="px-6 py-4 font-medium tracking-wider">Termin</th>
                                     <th scope="col" className="px-6 py-4 font-medium tracking-wider">Status</th>
                                     <th scope="col" className="px-6 py-4 font-medium tracking-wider text-right">Akcje</th>
                                 </tr>
@@ -113,24 +148,17 @@ function RentalsList() {
                                     visibleReservations.map((r) => (
                                         <tr key={r.id} className="hover:bg-white/5 transition-colors">
                                             <td className="px-6 py-4 text-muted-foreground">{r.id}</td>
-                                            <td className="px-6 py-4 font-medium">{r.equipment?.deviceType || `Sprzęt ${r.equipment?.id ?? ''}`}</td>
+                                            <td className="px-6 py-4">{r.userEmail || '—'}</td>
+                                            <td className="px-6 py-4 font-medium">{r.equipment?.deviceType || '—'}</td>
                                             <td className="px-6 py-4 text-muted-foreground font-mono text-xs">{r.equipment?.serialNumber || '—'}</td>
-                                            <td className="px-6 py-4 text-muted-foreground">{r.startDate?.replace('T', ' ')}</td>
-                                            <td className="px-6 py-4 text-muted-foreground">{r.endDate?.replace('T', ' ')}</td>
-                                            <td className="px-6 py-4">
-                                                <span className="px-2.5 py-1 text-xs font-semibold rounded-full bg-white/10 border border-white/10">
-                                                    {r.status}
-                                                </span>
-                                            </td>
-                                            <td className="px-6 py-4 text-right space-x-3">
+                                            <td className="px-6 py-4 text-muted-foreground">{r.startDate?.replace('T', ' ')} → {r.endDate?.replace('T', ' ')}</td>
+                                            <td className="px-6 py-4"><Badge status={r.status}>{r.status}</Badge></td>
+                                            <td className="px-6 py-4 text-right space-x-2">
                                                 {r.status === 'AKTYWNA' ? (
-                                                    <button
-                                                        onClick={() => cancel(r.id)}
-                                                        disabled={busyId === `cancel-${r.id}`}
-                                                        className="text-destructive hover:opacity-80 font-medium disabled:opacity-50"
-                                                    >
-                                                        {busyId === `cancel-${r.id}` ? 'Anulowanie...' : 'Anuluj'}
-                                                    </button>
+                                                    <>
+                                                        {actionBtn(`issue-${r.id}`, 'Wydaj', () => issue(r.id))}
+                                                        {actionBtn(`cancel-${r.id}`, 'Anuluj', () => cancel(r.id), 'destructive')}
+                                                    </>
                                                 ) : (
                                                     <span className="text-muted-foreground">—</span>
                                                 )}
@@ -146,20 +174,22 @@ function RentalsList() {
                                 )}
                                 </tbody>
                             </table>
-                        </div>
-                    </section>
+                        </CardContent>
+                    </Card>
 
-                    <section>
-                        <h3 className="text-lg font-semibold mb-3">Wypożyczenia</h3>
-                        <div className="rounded-md border border-white/10 overflow-x-auto bg-white/5 backdrop-blur-sm shadow-xl">
+                    <Card className="bg-white/5 border-white/10">
+                        <CardHeader>
+                            <CardTitle>Do odbioru ({visibleLoans.length})</CardTitle>
+                        </CardHeader>
+                        <CardContent className="overflow-x-auto p-0">
                             <table className="w-full text-sm text-left text-foreground whitespace-nowrap">
                                 <thead className="text-xs uppercase bg-black/20 text-muted-foreground border-b border-white/10">
                                 <tr>
                                     <th scope="col" className="px-6 py-4 font-medium tracking-wider">ID</th>
+                                    <th scope="col" className="px-6 py-4 font-medium tracking-wider">Użytkownik</th>
                                     <th scope="col" className="px-6 py-4 font-medium tracking-wider">Sprzęt</th>
                                     <th scope="col" className="px-6 py-4 font-medium tracking-wider">S/N</th>
-                                    <th scope="col" className="px-6 py-4 font-medium tracking-wider">Wydano</th>
-                                    <th scope="col" className="px-6 py-4 font-medium tracking-wider">Termin</th>
+                                    <th scope="col" className="px-6 py-4 font-medium tracking-wider">Wydano / Termin</th>
                                     <th scope="col" className="px-6 py-4 font-medium tracking-wider">Zwrócono</th>
                                     <th scope="col" className="px-6 py-4 font-medium tracking-wider text-right">Akcje</th>
                                 </tr>
@@ -169,20 +199,14 @@ function RentalsList() {
                                     visibleLoans.map((l) => (
                                         <tr key={l.id} className="hover:bg-white/5 transition-colors">
                                             <td className="px-6 py-4 text-muted-foreground">{l.id}</td>
-                                            <td className="px-6 py-4 font-medium">{l.equipment?.deviceType || `Sprzęt ${l.equipment?.id ?? ''}`}</td>
+                                            <td className="px-6 py-4">{l.userEmail || '—'}</td>
+                                            <td className="px-6 py-4 font-medium">{l.equipment?.deviceType || '—'}</td>
                                             <td className="px-6 py-4 text-muted-foreground font-mono text-xs">{l.equipment?.serialNumber || '—'}</td>
-                                            <td className="px-6 py-4 text-muted-foreground">{l.borrowDate?.replace('T', ' ')}</td>
-                                            <td className="px-6 py-4 text-muted-foreground">{l.expectedReturnDate?.replace('T', ' ')}</td>
-                                            <td className="px-6 py-4 text-muted-foreground">{l.actualReturnDate ? l.actualReturnDate.replace('T', ' ') : (l.returnRequestedAt ? <Badge variant="secondary">czeka na odbiór</Badge> : '—')}</td>
+                                            <td className="px-6 py-4 text-muted-foreground">{l.borrowDate?.replace('T', ' ')} → {l.expectedReturnDate?.replace('T', ' ')}</td>
+                                            <td className="px-6 py-4 text-muted-foreground">{l.actualReturnDate ? l.actualReturnDate.replace('T', ' ') : <Badge variant="secondary">wypożyczony</Badge>}</td>
                                             <td className="px-6 py-4 text-right">
-                                                {l.actualReturnDate == null && l.returnRequestedAt == null ? (
-                                                    <button
-                                                        onClick={() => requestReturn(l.id)}
-                                                        disabled={busyId === `return-${l.id}`}
-                                                        className="text-primary hover:text-primary/80 font-medium disabled:opacity-50"
-                                                    >
-                                                        {busyId === `return-${l.id}` ? 'Zgłaszanie...' : 'Zwróć'}
-                                                    </button>
+                                                {l.actualReturnDate == null ? (
+                                                    actionBtn(`return-${l.id}`, 'Odbierz zwrot', () => setReturnTarget({ id: l.id, label: `${l.equipment?.deviceType || ''} (${l.equipment?.serialNumber || ''}) — ${l.userEmail || ''}` }))
                                                 ) : (
                                                     <span className="text-muted-foreground">—</span>
                                                 )}
@@ -198,12 +222,20 @@ function RentalsList() {
                                 )}
                                 </tbody>
                             </table>
-                        </div>
-                    </section>
+                        </CardContent>
+                    </Card>
                 </>
             )}
+
+            <ReturnDialog
+                open={returnTarget != null}
+                equipmentLabel={returnTarget?.label}
+                busy={returnTarget != null && busyId === `return-${returnTarget.id}`}
+                onClose={() => setReturnTarget(null)}
+                onConfirm={confirmReturn}
+            />
         </div>
     );
 }
 
-export default RentalsList;
+export default OpiekunPanel;

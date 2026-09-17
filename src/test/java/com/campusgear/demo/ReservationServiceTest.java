@@ -75,7 +75,7 @@ class ReservationServiceTest {
 
         when(userRepository.findByEmail("a@campus.edu.pl")).thenReturn(Optional.of(user));
         when(equipmentRepository.findAndLockById(1L)).thenReturn(Optional.of(equipment));
-        when(reservationRepository.existsByEquipmentIdAndStartDateLessThanAndEndDateGreaterThanAndStatus(
+        when(reservationRepository.existsByEquipmentIdAndStartDateLessThanAndEndDateGreaterThanAndStatusIn(
                 anyLong(), any(), any(), any())).thenReturn(false);
         when(userRepository.getReferenceById(10L)).thenReturn(user);
         when(reservationRepository.save(any())).thenAnswer(inv -> {
@@ -131,7 +131,7 @@ class ReservationServiceTest {
         when(userRepository.findByEmail(anyString()))
                 .thenReturn(Optional.of(user("a@campus.edu.pl", 10L, Role.ROLE_STUDENT)));
         when(equipmentRepository.findAndLockById(1L)).thenReturn(Optional.of(equipment(1L)));
-        when(reservationRepository.existsByEquipmentIdAndStartDateLessThanAndEndDateGreaterThanAndStatus(
+        when(reservationRepository.existsByEquipmentIdAndStartDateLessThanAndEndDateGreaterThanAndStatusIn(
                 anyLong(), any(), any(), any())).thenReturn(true);
 
         assertThatThrownBy(() -> reservationService.createReservation(dto, "a@campus.edu.pl"))
@@ -260,5 +260,17 @@ class ReservationServiceTest {
                 reservationService.getMyReservations("a@campus.edu.pl", ReservationStatus.AKTYWNA);
 
         assertThat(result).isEmpty();
+    }
+
+    @Test
+    void shouldReturnAllReservationsForPanel() {
+        ReservationEntity r = activeReservation(
+                7L, 10L, LocalDateTime.now().plusDays(1), LocalDateTime.now().plusDays(2));
+        when(reservationRepository.findAllByOrderByStartDateDesc()).thenReturn(List.of(r));
+
+        List<ReservationResponseDTO> result = reservationService.getAllReservations(null);
+
+        assertThat(result).hasSize(1);
+        assertThat(result.get(0).userEmail()).isEqualTo("owner@campus.edu.pl");
     }
 }

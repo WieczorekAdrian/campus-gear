@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate, Outlet, Link } from '
 // Importy Twoich komponentów
 import EquipmentList from './components/EquipmentList';
 import RentalsList from './components/RentalsList';
+import OpiekunPanel from './components/OpiekunPanel';
 import Profile from './components/Profile';
 import Login from './components/Login';
 import Register from './components/Register';
@@ -15,8 +16,26 @@ function RequireAuth({ children }) {
     return children;
 }
 
+function isOpiekun() {
+    if (typeof window === 'undefined') return false;
+    const role = localStorage.getItem('role');
+    return role === 'ROLE_OPIEKUN' || role === 'ROLE_ADMIN';
+}
+
+function RequireOpiekun({ children }) {
+    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+    if (!token) {
+        return <Navigate to="/login" replace />;
+    }
+    if (!isOpiekun()) {
+        return <Navigate to="/equipment" replace />;
+    }
+    return children;
+}
+
 // 1. Główny układ aplikacji (Layout) dla zalogowanych
 function MainLayout() {
+    const showPanel = isOpiekun();
     return (
         <div className="min-h-screen bg-background text-foreground flex flex-col">
 
@@ -28,6 +47,11 @@ function MainLayout() {
                 <Link to="/rentals" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
                     Moje Wypożyczenia
                 </Link>
+                {showPanel && (
+                    <Link to="/panel" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
+                        Panel opiekuna
+                    </Link>
+                )}
                 <Link to="/profile" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
                     Profil
                 </Link>
@@ -56,6 +80,7 @@ function App() {
                     <Route path="/equipment" element={<EquipmentList />} />
                     <Route path="/rentals" element={<RentalsList />} />
                     <Route path="/profile" element={<Profile />} />
+                    <Route path="/panel" element={<RequireOpiekun><OpiekunPanel /></RequireOpiekun>} />
                 </Route>
             </Routes>
         </Router>

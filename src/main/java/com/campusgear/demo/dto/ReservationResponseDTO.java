@@ -9,6 +9,7 @@ public record ReservationResponseDTO(
         LocalDateTime startDate,
         LocalDateTime endDate,
         ReservationStatus status,
+        String userEmail,
         EquipmentSummaryDTO equipment
 ) {
     public record EquipmentSummaryDTO(

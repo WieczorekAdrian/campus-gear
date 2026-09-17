@@ -19,6 +19,12 @@ public class EquipmentEntity {
     @OneToMany(mappedBy = "equipment", cascade = CascadeType.ALL)
     private List<ReservationEntity> reservations;
 
+    @OneToMany(mappedBy = "equipment", cascade = CascadeType.ALL)
+    private List<LoanEntity> loans;
+
+    @OneToMany(mappedBy = "equipment", cascade = CascadeType.ALL)
+    private List<DefectReportEntity> defectReports;
+
     private String deviceType;
     private String technicalSpecification;
     private String serialNumber;

@@ -42,6 +42,7 @@ class ReservationControllerTest extends AbstractIntegrationTest {
                 LocalDateTime.of(2026, 10, 1, 10, 0),
                 LocalDateTime.of(2026, 10, 3, 10, 0),
                 ReservationStatus.AKTYWNA,
+                "student@campus.edu.pl",
                 new ReservationResponseDTO.EquipmentSummaryDTO(
                         2L, "Laptop", "Dell XPS", "DELL-12345", "Main Hall"));
     }
@@ -78,7 +79,7 @@ class ReservationControllerTest extends AbstractIntegrationTest {
     void shouldCancelReservation() throws Exception {
         ReservationResponseDTO cancelled = new ReservationResponseDTO(
                 1L, response().startDate(), response().endDate(),
-                ReservationStatus.ANULOWANA, response().equipment());
+                ReservationStatus.ANULOWANA, response().userEmail(), response().equipment());
         when(reservationService.cancelReservation(eq(1L), eq("student@campus.edu.pl")))
                 .thenReturn(cancelled);
 
@@ -105,5 +106,22 @@ class ReservationControllerTest extends AbstractIntegrationTest {
     void shouldRequireAuthForReservations() throws Exception {
         mockMvc.perform(get("/api/reservations/mine"))
                 .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void shouldForbidAllReservationsForStudent() throws Exception {
+        mockMvc.perform(get("/api/reservations")
+                        .with(user("student@campus.edu.pl").roles("STUDENT")))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void shouldReturnAllReservationsForOpiekun() throws Exception {
+        when(reservationService.getAllReservations(any())).thenReturn(List.of(response()));
+
+        mockMvc.perform(get("/api/reservations")
+                        .with(user("opiekun@campus.edu.pl").roles("OPIEKUN")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].userEmail").value("student@campus.edu.pl"));
     }
 }
