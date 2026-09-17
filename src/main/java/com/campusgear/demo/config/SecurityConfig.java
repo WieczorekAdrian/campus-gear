@@ -2,8 +2,6 @@ package com.campusgear.demo.config;
 
 import com.campusgear.demo.config.JwtAuthenticationFilter;
 import com.campusgear.demo.config.JwtTokenProvider;
-import com.campusgear.demo.repository.UserEntityRepository;
-import lombok.AllArgsConstructor;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -25,11 +23,11 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 public class SecurityConfig {
 
     private final JwtTokenProvider tokenProvider;
-    private final UserEntityRepository userRepository;
+    private final CustomUserDetailsService userDetailsService;
 
     @Bean
     public JwtAuthenticationFilter jwtAuthenticationFilter() {
-        return new JwtAuthenticationFilter(tokenProvider, userRepository);
+        return new JwtAuthenticationFilter(tokenProvider, userDetailsService);
     }
 
     @Bean

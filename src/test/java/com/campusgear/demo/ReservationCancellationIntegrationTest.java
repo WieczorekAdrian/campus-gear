@@ -26,6 +26,7 @@ import org.testcontainers.shaded.com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.LocalDateTime;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -124,7 +125,7 @@ class ReservationCancellationIntegrationTest extends AbstractIntegrationTest {
         reservation = reservationRepository.save(reservation);
 
         // When & Then
-        mockMvc.perform(post("/api/reservations/" + reservation.getId() + "/cancel")
+        mockMvc.perform(patch("/api/reservations/" + reservation.getId() + "/cancel")
                         .header("Authorization", "Bearer " + studentToken))
                 .andExpect(status().isOk());
 
@@ -147,7 +148,7 @@ class ReservationCancellationIntegrationTest extends AbstractIntegrationTest {
         reservation = reservationRepository.save(reservation);
 
         // When & Then
-        mockMvc.perform(post("/api/reservations/" + reservation.getId() + "/cancel")
+        mockMvc.perform(patch("/api/reservations/" + reservation.getId() + "/cancel")
                         .header("Authorization", "Bearer " + opiekunToken))
                 .andExpect(status().isOk());
 
@@ -181,9 +182,9 @@ class ReservationCancellationIntegrationTest extends AbstractIntegrationTest {
         reservation = reservationRepository.save(reservation);
 
         // When & Then
-        mockMvc.perform(post("/api/reservations/" + reservation.getId() + "/cancel")
+        mockMvc.perform(patch("/api/reservations/" + reservation.getId() + "/cancel")
                         .header("Authorization", "Bearer " + student2Token))
-                .andExpect(status().isBadRequest());
+                .andExpect(status().isForbidden());
     }
 
     @Test
@@ -201,8 +202,8 @@ class ReservationCancellationIntegrationTest extends AbstractIntegrationTest {
         reservation = reservationRepository.save(reservation);
 
         // When & Then
-        mockMvc.perform(post("/api/reservations/" + reservation.getId() + "/cancel")
+        mockMvc.perform(patch("/api/reservations/" + reservation.getId() + "/cancel")
                         .header("Authorization", "Bearer " + studentToken))
-                .andExpect(status().isBadRequest());
+                .andExpect(status().isConflict());
     }
 }

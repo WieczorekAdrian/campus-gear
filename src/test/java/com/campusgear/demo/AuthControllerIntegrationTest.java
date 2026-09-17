@@ -85,6 +85,21 @@ class AuthControllerIntegrationTest extends AbstractIntegrationTest {
     }
 
     @Test
+    void shouldNotRegisterUserOutsideAcademicDomain() throws Exception {
+        RegisterDto outsideDto = new RegisterDto(
+                "random@gmail.com",
+                "password123",
+                "Jan",
+                "Kowalski"
+        );
+
+        mockMvc.perform(post("/api/auth/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(outsideDto)))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
     void shouldLoginSuccessfullyAndReturnToken() throws Exception {
         // Given
         RegisterDto registerDto = new RegisterDto(

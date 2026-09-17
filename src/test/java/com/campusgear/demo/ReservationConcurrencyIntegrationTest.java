@@ -84,7 +84,7 @@ class ReservationConcurrencyIntegrationTest extends AbstractIntegrationTest {
             executorService.submit(() -> {
                 try {
                     startLatch.await(); // Czekaj na sygnał startu
-                    reservationService.createReservation(dto, testUser);
+                    reservationService.createReservation(dto, testUser.getEmail());
                     successCount.incrementAndGet();
                 } catch (Exception e) {
                     failureCount.incrementAndGet();

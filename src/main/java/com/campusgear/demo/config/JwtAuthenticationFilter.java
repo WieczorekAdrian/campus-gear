@@ -1,14 +1,14 @@
 package com.campusgear.demo.config;
 
-import com.campusgear.demo.entity.UserEntity;
-import com.campusgear.demo.repository.UserEntityRepository;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.authority.AuthorityUtils;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.util.StringUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
 
@@ -17,11 +17,11 @@ import java.io.IOException;
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtTokenProvider tokenProvider;
-    private final UserEntityRepository userRepository;
+    private final UserDetailsService userDetailsService;
 
-    public JwtAuthenticationFilter(JwtTokenProvider tokenProvider, UserEntityRepository userRepository) {
+    public JwtAuthenticationFilter(JwtTokenProvider tokenProvider, UserDetailsService userDetailsService) {
         this.tokenProvider = tokenProvider;
-        this.userRepository = userRepository;
+        this.userDetailsService = userDetailsService;
     }
 
     @Override
@@ -33,16 +33,17 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
             if (StringUtils.hasText(jwt) && tokenProvider.validateToken(jwt)) {
                 String username = tokenProvider.getUsernameFromJWT(jwt);
-                
-                // Ładujemy pełnego użytkownika z bazy, aby @AuthenticationPrincipal nie był null
-                UserEntity user = userRepository.findByEmail(username).orElse(null);
 
-                if (user != null) {
+                try {
+                    UserDetails userDetails = userDetailsService.loadUserByUsername(username);
+
                     UsernamePasswordAuthenticationToken authentication =
-                            new UsernamePasswordAuthenticationToken(user, null, user.getAuthorities());
+                            new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
 
                     // Informujemy Spring Security, kto właśnie wykonuje akcję
                     SecurityContextHolder.getContext().setAuthentication(authentication);
+                } catch (UsernameNotFoundException ex) {
+                    logger.warn("JWT dla nieistniejącego użytkownika: " + username);
                 }
             }
         } catch (Exception ex) {
