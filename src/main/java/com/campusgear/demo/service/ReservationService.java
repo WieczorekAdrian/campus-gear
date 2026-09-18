@@ -7,14 +7,14 @@ import com.campusgear.demo.entity.ReservationEntity;
 import com.campusgear.demo.entity.UserEntity;
 import com.campusgear.demo.exception.ReservationConflictException;
 import com.campusgear.demo.exception.ResourceNotFoundException;
+import com.campusgear.demo.mapper.ReservationMapper;
 import com.campusgear.demo.repository.EquipmentEntityRepository;
 import com.campusgear.demo.repository.ReservationEntityRepository;
 import com.campusgear.demo.repository.UserEntityRepository;
 import com.campusgear.demo.status.ReservationStatus;
-import com.campusgear.demo.status.Role;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -30,6 +30,7 @@ public class ReservationService {
     private final ReservationEntityRepository reservationRepository;
     private final EquipmentEntityRepository equipmentRepository;
     private final UserEntityRepository userRepository;
+    private final ReservationMapper reservationMapper;
 
     @Transactional
     public ReservationResponseDTO createReservation(ReservationRequestDTO dto, String email) {
@@ -57,7 +58,7 @@ public class ReservationService {
         boolean isOccupied = reservationRepository
                 .existsByEquipmentIdAndStartDateLessThanAndEndDateGreaterThanAndStatusIn(
                         dto.equipmentId(), dto.endDate(), dto.startDate(),
-                        java.util.List.of(ReservationStatus.AKTYWNA, ReservationStatus.WYPOZYCZONA));
+                        List.of(ReservationStatus.AKTYWNA, ReservationStatus.WYPOZYCZONA));
 
         if (isOccupied) {
             throw new ReservationConflictException("Ten sprzęt jest już zarezerwowany w tym terminie.");
@@ -73,25 +74,16 @@ public class ReservationService {
         ReservationEntity saved = reservationRepository.save(reservation);
         log.info("Successfully created reservation id {} for user {}", saved.getId(), email);
 
-        return toDto(saved);
+        return reservationMapper.toDto(saved);
     }
 
     @Transactional
+    @PreAuthorize("@reservationAccess.canCancel(#reservationId, authentication.name)")
     public ReservationResponseDTO cancelReservation(Long reservationId, String email) {
         log.info("Attempting to cancel reservation {} by user {}", reservationId, email);
 
         ReservationEntity reservation = reservationRepository.findById(reservationId)
                 .orElseThrow(() -> new ResourceNotFoundException("Nie znaleziono rezerwacji o ID: " + reservationId));
-
-        UserEntity caller = userRepository.findByEmail(email)
-                .orElseThrow(() -> new ResourceNotFoundException("Nie znaleziono użytkownika: " + email));
-
-        boolean isOwner = reservation.getUser().getId().equals(caller.getId());
-        boolean isOpiekun = caller.getRole() == Role.ROLE_OPIEKUN || caller.getRole() == Role.ROLE_ADMIN;
-
-        if (!isOwner && !isOpiekun) {
-            throw new AccessDeniedException("Brak uprawnień do anulowania tej rezerwacji.");
-        }
 
         if (reservation.getStatus() != ReservationStatus.AKTYWNA) {
             throw new ReservationConflictException("Można anulować tylko aktywną rezerwację.");
@@ -101,11 +93,11 @@ public class ReservationService {
             throw new ReservationConflictException("Można anulować tylko rezerwację przed jej rozpoczęciem.");
         }
 
+        // Encja jest managed w transakcji - dirty checking sam zapisze zmianę przy commicie.
         reservation.setStatus(ReservationStatus.ANULOWANA);
-        ReservationEntity saved = reservationRepository.save(reservation);
-        log.info("Successfully cancelled reservation id {} by user {}", saved.getId(), email);
+        log.info("Successfully cancelled reservation id {} by user {}", reservation.getId(), email);
 
-        return toDto(saved);
+        return reservationMapper.toDto(reservation);
     }
 
     @Transactional(readOnly = true)
@@ -117,7 +109,7 @@ public class ReservationService {
                 ? reservationRepository.findByUser_EmailOrderByStartDateDesc(caller.getEmail())
                 : reservationRepository.findByUser_EmailAndStatusOrderByStartDateDesc(caller.getEmail(), status);
 
-        return reservations.stream().map(this::toDto).toList();
+        return reservations.stream().map(reservationMapper::toDto).toList();
     }
 
     @Transactional(readOnly = true)
@@ -126,28 +118,6 @@ public class ReservationService {
                 ? reservationRepository.findAllByOrderByStartDateDesc()
                 : reservationRepository.findByStatusOrderByStartDateDesc(status);
 
-        return reservations.stream().map(this::toDto).toList();
-    }
-
-    private ReservationResponseDTO toDto(ReservationEntity reservation) {
-        EquipmentEntity equipment = reservation.getEquipment();
-        ReservationResponseDTO.EquipmentSummaryDTO equipmentDto = null;
-        if (equipment != null) {
-            equipmentDto = new ReservationResponseDTO.EquipmentSummaryDTO(
-                    equipment.getId(),
-                    equipment.getDeviceType(),
-                    equipment.getTechnicalSpecification(),
-                    equipment.getSerialNumber(),
-                    equipment.getLocation()
-            );
-        }
-        return new ReservationResponseDTO(
-                reservation.getId(),
-                reservation.getStartDate(),
-                reservation.getEndDate(),
-                reservation.getStatus(),
-                reservation.getUser() != null ? reservation.getUser().getEmail() : null,
-                equipmentDto
-        );
+        return reservations.stream().map(reservationMapper::toDto).toList();
     }
 }

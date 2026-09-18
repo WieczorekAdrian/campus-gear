@@ -2,25 +2,21 @@ package com.campusgear.demo.service;
 
 import com.campusgear.demo.dto.LoanResponseDTO;
 import com.campusgear.demo.dto.LoanReturnDTO;
-import com.campusgear.demo.dto.ReservationResponseDTO;
-import com.campusgear.demo.entity.DefectReportEntity;
 import com.campusgear.demo.entity.EquipmentEntity;
 import com.campusgear.demo.entity.LoanEntity;
 import com.campusgear.demo.entity.ReservationEntity;
 import com.campusgear.demo.entity.UserEntity;
 import com.campusgear.demo.exception.ReservationConflictException;
 import com.campusgear.demo.exception.ResourceNotFoundException;
-import com.campusgear.demo.repository.DefectReportEntityRepository;
+import com.campusgear.demo.mapper.LoanMapper;
 import com.campusgear.demo.repository.LoanEntityRepository;
 import com.campusgear.demo.repository.ReservationEntityRepository;
 import com.campusgear.demo.repository.UserEntityRepository;
-import com.campusgear.demo.status.DefectStatus;
 import com.campusgear.demo.status.EquipmentStatus;
 import com.campusgear.demo.status.ReservationStatus;
-import com.campusgear.demo.status.Role;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -35,9 +31,11 @@ public class LoanService {
     private final LoanEntityRepository loanRepository;
     private final ReservationEntityRepository reservationRepository;
     private final UserEntityRepository userRepository;
-    private final DefectReportEntityRepository defectReportRepository;
+    private final DefectReportService defectReportService;
+    private final LoanMapper loanMapper;
 
     @Transactional
+    @PreAuthorize("hasAnyRole('OPIEKUN', 'ADMIN')")
     public LoanResponseDTO issueLoan(Long reservationId, String email) {
         log.info("Attempting to issue loan for reservation {} by user {}", reservationId, email);
 
@@ -54,12 +52,7 @@ public class LoanService {
 
         UserEntity caller = userRepository.findByEmail(email)
                 .orElseThrow(() -> new ResourceNotFoundException("Nie znaleziono użytkownika: " + email));
-
-        boolean isOpiekun = caller.getRole() == Role.ROLE_OPIEKUN || caller.getRole() == Role.ROLE_ADMIN;
-
-        if (!isOpiekun) {
-            throw new AccessDeniedException("Sprzęt może wydać tylko opiekun.");
-        }
+        log.debug("Issued by {} with role {}", caller.getEmail(), caller.getRole());
 
         EquipmentEntity equipment = reservation.getEquipment();
 
@@ -76,10 +69,11 @@ public class LoanService {
         LoanEntity saved = loanRepository.save(loan);
         log.info("Successfully issued loan id {} for reservation {}", saved.getId(), reservationId);
 
-        return toDto(saved);
+        return loanMapper.toDto(saved);
     }
 
     @Transactional
+    @PreAuthorize("@loanAccess.canRequestReturn(#loanId, authentication.name)")
     public LoanResponseDTO requestReturn(Long loanId, String email) {
         log.info("Return requested for loan {} by user {}", loanId, email);
 
@@ -94,25 +88,15 @@ public class LoanService {
             throw new ReservationConflictException("Zwrot został już zgłoszony, czeka na odbiór przez opiekuna.");
         }
 
-        UserEntity caller = userRepository.findByEmail(email)
-                .orElseThrow(() -> new ResourceNotFoundException("Nie znaleziono użytkownika: " + email));
-
-        boolean isOwner = loan.getUser().getId().equals(caller.getId());
-        boolean isOpiekun = caller.getRole() == Role.ROLE_OPIEKUN || caller.getRole() == Role.ROLE_ADMIN;
-
-        if (!isOwner && !isOpiekun) {
-            throw new AccessDeniedException("Brak uprawnień do zgłoszenia zwrotu tego wypożyczenia.");
-        }
-
+        // Encja jest managed w transakcji - dirty checking sam zapisze zmianę przy commicie.
         loan.setReturnRequestedAt(LocalDateTime.now());
+        log.info("Return requested for loan id {} by user {}", loan.getId(), email);
 
-        LoanEntity saved = loanRepository.save(loan);
-        log.info("Return requested for loan id {} by user {}", saved.getId(), email);
-
-        return toDto(saved);
+        return loanMapper.toDto(loan);
     }
 
     @Transactional
+    @PreAuthorize("hasAnyRole('OPIEKUN', 'ADMIN')")
     public LoanResponseDTO confirmReturn(Long loanId, String email, LoanReturnDTO dto) {
         log.info("Attempting to confirm return of loan {} by user {}", loanId, email);
 
@@ -126,12 +110,6 @@ public class LoanService {
         UserEntity caller = userRepository.findByEmail(email)
                 .orElseThrow(() -> new ResourceNotFoundException("Nie znaleziono użytkownika: " + email));
 
-        boolean isOpiekun = caller.getRole() == Role.ROLE_OPIEKUN || caller.getRole() == Role.ROLE_ADMIN;
-
-        if (!isOpiekun) {
-            throw new AccessDeniedException("Odbiór zwrotu potwierdza tylko opiekun.");
-        }
-
         boolean damaged = dto != null && Boolean.TRUE.equals(dto.damaged());
 
         if (loan.getReturnRequestedAt() == null) {
@@ -141,16 +119,7 @@ public class LoanService {
 
         if (damaged) {
             loan.getEquipment().setStatus(EquipmentStatus.SERWISOWANY);
-
-            DefectReportEntity defect = new DefectReportEntity();
-            defect.setDescription(dto.damageDescription() != null && !dto.damageDescription().isBlank()
-                    ? dto.damageDescription()
-                    : "Uszkodzenie zgłoszone przy zwrocie");
-            defect.setReportDate(LocalDateTime.now());
-            defect.setStatus(DefectStatus.ZGLOSZONA);
-            defect.setEquipment(loan.getEquipment());
-            defect.setReporter(caller);
-            defectReportRepository.save(defect);
+            defectReportService.reportDefect(loan.getEquipment(), caller, dto.damageDescription());
             log.info("Defect reported for equipment {} on loan {}", loan.getEquipment().getId(), loanId);
         } else {
             loan.getEquipment().setStatus(EquipmentStatus.DOSTEPNY);
@@ -160,10 +129,9 @@ public class LoanService {
             loan.getReservation().setStatus(ReservationStatus.ZAKONCZONA);
         }
 
-        LoanEntity saved = loanRepository.save(loan);
-        log.info("Successfully confirmed return of loan id {} by user {} (damaged={})", saved.getId(), email, damaged);
+        log.info("Successfully confirmed return of loan id {} by user {} (damaged={})", loan.getId(), email, damaged);
 
-        return toDto(saved);
+        return loanMapper.toDto(loan);
     }
 
     @Transactional(readOnly = true)
@@ -173,7 +141,7 @@ public class LoanService {
 
         return loanRepository.findByUser_EmailOrderByBorrowDateDesc(caller.getEmail())
                 .stream()
-                .map(this::toDto)
+                .map(loanMapper::toDto)
                 .toList();
     }
 
@@ -183,30 +151,6 @@ public class LoanService {
                 ? loanRepository.findByActualReturnDateIsNullOrderByBorrowDateDesc()
                 : loanRepository.findAllByOrderByBorrowDateDesc();
 
-        return loans.stream().map(this::toDto).toList();
-    }
-
-    private LoanResponseDTO toDto(LoanEntity loan) {
-        EquipmentEntity equipment = loan.getEquipment();
-        ReservationResponseDTO.EquipmentSummaryDTO equipmentDto = null;
-        if (equipment != null) {
-            equipmentDto = new ReservationResponseDTO.EquipmentSummaryDTO(
-                    equipment.getId(),
-                    equipment.getDeviceType(),
-                    equipment.getTechnicalSpecification(),
-                    equipment.getSerialNumber(),
-                    equipment.getLocation()
-            );
-        }
-        return new LoanResponseDTO(
-                loan.getId(),
-                loan.getBorrowDate(),
-                loan.getExpectedReturnDate(),
-                loan.getReturnRequestedAt(),
-                loan.getActualReturnDate(),
-                loan.getReservation() != null ? loan.getReservation().getId() : null,
-                loan.getUser() != null ? loan.getUser().getEmail() : null,
-                equipmentDto
-        );
+        return loans.stream().map(loanMapper::toDto).toList();
     }
 }

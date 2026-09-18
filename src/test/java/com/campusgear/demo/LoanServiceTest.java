@@ -8,20 +8,20 @@ import com.campusgear.demo.entity.ReservationEntity;
 import com.campusgear.demo.entity.UserEntity;
 import com.campusgear.demo.exception.ReservationConflictException;
 import com.campusgear.demo.exception.ResourceNotFoundException;
-import com.campusgear.demo.repository.DefectReportEntityRepository;
+import com.campusgear.demo.mapper.LoanMapperImpl;
 import com.campusgear.demo.repository.LoanEntityRepository;
 import com.campusgear.demo.repository.ReservationEntityRepository;
 import com.campusgear.demo.repository.UserEntityRepository;
+import com.campusgear.demo.service.DefectReportService;
 import com.campusgear.demo.service.LoanService;
 import com.campusgear.demo.status.EquipmentStatus;
 import com.campusgear.demo.status.ReservationStatus;
 import com.campusgear.demo.status.Role;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.security.access.AccessDeniedException;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -46,10 +46,17 @@ class LoanServiceTest {
     private UserEntityRepository userRepository;
 
     @Mock
-    private DefectReportEntityRepository defectReportRepository;
+    private DefectReportService defectReportService;
 
-    @InjectMocks
     private LoanService loanService;
+
+    @BeforeEach
+    void initService() {
+        // Prawdziwy mapper (MapStruct). @PreAuthorize jest inert bez proxy Springa,
+        // reguły dostępu testujemy w LoanAccessTest + teście integracyjnym.
+        loanService = new LoanService(
+                loanRepository, reservationRepository, userRepository, defectReportService, new LoanMapperImpl());
+    }
 
     private UserEntity user(String email, Long id, Role role) {
         UserEntity user = new UserEntity();
@@ -81,18 +88,8 @@ class LoanServiceTest {
         return r;
     }
 
-    @Test
-    void shouldForbidIssueForOwner() {
-        ReservationEntity r = reservation(5L, 10L);
-        when(reservationRepository.findById(5L)).thenReturn(Optional.of(r));
-        when(loanRepository.existsByReservationId(5L)).thenReturn(false);
-        when(userRepository.findByEmail("owner@campus.edu.pl"))
-                .thenReturn(Optional.of(user("owner@campus.edu.pl", 10L, Role.ROLE_STUDENT)));
-
-        assertThatThrownBy(() -> loanService.issueLoan(5L, "owner@campus.edu.pl"))
-                .isInstanceOf(AccessDeniedException.class)
-                .hasMessageContaining("tylko opiekun");
-    }
+    // Reguła "wydać może tylko opiekun" żyje w @PreAuthorize (inert w teście
+    // jednostkowym bez proxy Springa) - pokrywa ją LoanSecurityIntegrationTest.
 
     @Test
     void shouldLetOpiekunIssueForeignLoan() {
@@ -137,18 +134,6 @@ class LoanServiceTest {
                 .hasMessageContaining("już zrealizowana");
     }
 
-    @Test
-    void shouldForbidIssueForForeignStudent() {
-        ReservationEntity r = reservation(5L, 10L);
-        when(reservationRepository.findById(5L)).thenReturn(Optional.of(r));
-        when(loanRepository.existsByReservationId(5L)).thenReturn(false);
-        when(userRepository.findByEmail("other@campus.edu.pl"))
-                .thenReturn(Optional.of(user("other@campus.edu.pl", 30L, Role.ROLE_STUDENT)));
-
-        assertThatThrownBy(() -> loanService.issueLoan(5L, "other@campus.edu.pl"))
-                .isInstanceOf(AccessDeniedException.class);
-    }
-
     private LoanEntity activeLoan(Long id, Long ownerId) {
         LoanEntity loan = new LoanEntity();
         loan.setId(id);
@@ -166,9 +151,6 @@ class LoanServiceTest {
     void shouldRequestReturn() {
         LoanEntity loan = activeLoan(50L, 10L);
         when(loanRepository.findById(50L)).thenReturn(Optional.of(loan));
-        when(userRepository.findByEmail("owner@campus.edu.pl"))
-                .thenReturn(Optional.of(user("owner@campus.edu.pl", 10L, Role.ROLE_STUDENT)));
-        when(loanRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
         LoanResponseDTO result = loanService.requestReturn(50L, "owner@campus.edu.pl");
 
@@ -188,16 +170,8 @@ class LoanServiceTest {
                 .hasMessageContaining("czeka na odbiór");
     }
 
-    @Test
-    void shouldForbidRequestForForeignStudent() {
-        LoanEntity loan = activeLoan(50L, 10L);
-        when(loanRepository.findById(50L)).thenReturn(Optional.of(loan));
-        when(userRepository.findByEmail("other@campus.edu.pl"))
-                .thenReturn(Optional.of(user("other@campus.edu.pl", 30L, Role.ROLE_STUDENT)));
-
-        assertThatThrownBy(() -> loanService.requestReturn(50L, "other@campus.edu.pl"))
-                .isInstanceOf(AccessDeniedException.class);
-    }
+    // Reguła "zgłosić może właściciel lub opiekun" żyje w @PreAuthorize
+    // (LoanAccess) - pokrywa ją LoanAccessTest + test integracyjny.
 
     @Test
     void shouldConfirmReturnAndFlipStatuses() {
@@ -206,7 +180,6 @@ class LoanServiceTest {
         when(loanRepository.findById(50L)).thenReturn(Optional.of(loan));
         when(userRepository.findByEmail("opiekun@campus.edu.pl"))
                 .thenReturn(Optional.of(user("opiekun@campus.edu.pl", 20L, Role.ROLE_OPIEKUN)));
-        when(loanRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
         LoanResponseDTO result = loanService.confirmReturn(50L, "opiekun@campus.edu.pl",
                 new LoanReturnDTO(false, null));
@@ -214,7 +187,8 @@ class LoanServiceTest {
         assertThat(result.actualReturnDate()).isNotNull();
         assertThat(loan.getEquipment().getStatus()).isEqualTo(EquipmentStatus.DOSTEPNY);
         assertThat(loan.getReservation().getStatus()).isEqualTo(ReservationStatus.ZAKONCZONA);
-        verify(defectReportRepository, org.mockito.Mockito.never()).save(any());
+        verify(defectReportService, org.mockito.Mockito.never())
+                .reportDefect(any(), any(), any());
     }
 
     @Test
@@ -224,14 +198,13 @@ class LoanServiceTest {
         when(loanRepository.findById(50L)).thenReturn(Optional.of(loan));
         when(userRepository.findByEmail("opiekun@campus.edu.pl"))
                 .thenReturn(Optional.of(user("opiekun@campus.edu.pl", 20L, Role.ROLE_OPIEKUN)));
-        when(loanRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
         LoanResponseDTO result = loanService.confirmReturn(50L, "opiekun@campus.edu.pl",
                 new LoanReturnDTO(true, "Pęknięta obudowa"));
 
         assertThat(result.actualReturnDate()).isNotNull();
         assertThat(loan.getEquipment().getStatus()).isEqualTo(EquipmentStatus.SERWISOWANY);
-        verify(defectReportRepository).save(any());
+        verify(defectReportService).reportDefect(any(), any(), any());
     }
 
     @Test
@@ -246,18 +219,8 @@ class LoanServiceTest {
                 .hasMessageContaining("już zwrócony");
     }
 
-    @Test
-    void shouldForbidConfirmForStudent() {
-        LoanEntity loan = activeLoan(50L, 10L);
-        when(loanRepository.findById(50L)).thenReturn(Optional.of(loan));
-        when(userRepository.findByEmail("owner@campus.edu.pl"))
-                .thenReturn(Optional.of(user("owner@campus.edu.pl", 10L, Role.ROLE_STUDENT)));
-
-        assertThatThrownBy(() -> loanService.confirmReturn(50L, "owner@campus.edu.pl",
-                new LoanReturnDTO(false, null)))
-                .isInstanceOf(AccessDeniedException.class)
-                .hasMessageContaining("tylko opiekun");
-    }
+    // Reguła "odebrać może tylko opiekun" żyje w @PreAuthorize -
+    // pokrywa ją LoanSecurityIntegrationTest.
 
     @Test
     void shouldReturnMyLoans() {
