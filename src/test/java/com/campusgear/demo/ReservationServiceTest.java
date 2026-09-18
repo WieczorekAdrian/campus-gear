@@ -11,14 +11,14 @@ import com.campusgear.demo.repository.EquipmentEntityRepository;
 import com.campusgear.demo.repository.ReservationEntityRepository;
 import com.campusgear.demo.repository.UserEntityRepository;
 import com.campusgear.demo.service.ReservationService;
+import com.campusgear.demo.mapper.ReservationMapperImpl;
 import com.campusgear.demo.status.ReservationStatus;
 import com.campusgear.demo.status.Role;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.security.access.AccessDeniedException;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -44,8 +44,16 @@ class ReservationServiceTest {
     @Mock
     private UserEntityRepository userRepository;
 
-    @InjectMocks
     private ReservationService reservationService;
+
+    @BeforeEach
+    void initService() {
+        // Prawdziwy mapper (MapStruct) zamiast mocka - testujemy też mapowanie.
+        // @PreAuthorize jest inert bez proxy Springa, więc reguły dostępu
+        // testujemy osobno w ReservationAccessTest + teście integracyjnym.
+        reservationService = new ReservationService(
+                reservationRepository, equipmentRepository, userRepository, new ReservationMapperImpl());
+    }
 
     private UserEntity user(String email, Long id, Role role) {
         UserEntity user = new UserEntity();
@@ -170,9 +178,6 @@ class ReservationServiceTest {
         ReservationEntity r = activeReservation(
                 5L, 10L, LocalDateTime.now().plusDays(2), LocalDateTime.now().plusDays(3));
         when(reservationRepository.findById(5L)).thenReturn(Optional.of(r));
-        when(userRepository.findByEmail("owner@campus.edu.pl"))
-                .thenReturn(Optional.of(user("owner@campus.edu.pl", 10L, Role.ROLE_STUDENT)));
-        when(reservationRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
         ReservationResponseDTO result = reservationService.cancelReservation(5L, "owner@campus.edu.pl");
 
@@ -184,25 +189,10 @@ class ReservationServiceTest {
         ReservationEntity r = activeReservation(
                 5L, 10L, LocalDateTime.now().plusDays(2), LocalDateTime.now().plusDays(3));
         when(reservationRepository.findById(5L)).thenReturn(Optional.of(r));
-        when(userRepository.findByEmail("opiekun@campus.edu.pl"))
-                .thenReturn(Optional.of(user("opiekun@campus.edu.pl", 20L, Role.ROLE_OPIEKUN)));
-        when(reservationRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
         ReservationResponseDTO result = reservationService.cancelReservation(5L, "opiekun@campus.edu.pl");
 
         assertThat(result.status()).isEqualTo(ReservationStatus.ANULOWANA);
-    }
-
-    @Test
-    void shouldForbidStudentCancellingForeignReservation() {
-        ReservationEntity r = activeReservation(
-                5L, 10L, LocalDateTime.now().plusDays(2), LocalDateTime.now().plusDays(3));
-        when(reservationRepository.findById(5L)).thenReturn(Optional.of(r));
-        when(userRepository.findByEmail("other@campus.edu.pl"))
-                .thenReturn(Optional.of(user("other@campus.edu.pl", 30L, Role.ROLE_STUDENT)));
-
-        assertThatThrownBy(() -> reservationService.cancelReservation(5L, "other@campus.edu.pl"))
-                .isInstanceOf(AccessDeniedException.class);
     }
 
     @Test
@@ -211,8 +201,6 @@ class ReservationServiceTest {
                 5L, 10L, LocalDateTime.now().plusDays(2), LocalDateTime.now().plusDays(3));
         r.setStatus(ReservationStatus.ANULOWANA);
         when(reservationRepository.findById(5L)).thenReturn(Optional.of(r));
-        when(userRepository.findByEmail("owner@campus.edu.pl"))
-                .thenReturn(Optional.of(user("owner@campus.edu.pl", 10L, Role.ROLE_STUDENT)));
 
         assertThatThrownBy(() -> reservationService.cancelReservation(5L, "owner@campus.edu.pl"))
                 .isInstanceOf(ReservationConflictException.class)
@@ -224,8 +212,6 @@ class ReservationServiceTest {
         ReservationEntity r = activeReservation(
                 5L, 10L, LocalDateTime.now().minusHours(1), LocalDateTime.now().plusDays(1));
         when(reservationRepository.findById(5L)).thenReturn(Optional.of(r));
-        when(userRepository.findByEmail("owner@campus.edu.pl"))
-                .thenReturn(Optional.of(user("owner@campus.edu.pl", 10L, Role.ROLE_STUDENT)));
 
         assertThatThrownBy(() -> reservationService.cancelReservation(5L, "owner@campus.edu.pl"))
                 .isInstanceOf(ReservationConflictException.class)
