@@ -120,4 +120,31 @@ class ReportServiceTest {
         assertThat(csv).contains("\"X;1\"");
         assertThat(csv).contains(";AKTYWNY\n");
     }
+
+    @Test
+    void shouldExportPdfWithTransliteration() throws Exception {
+        EquipmentEntity equipment = new EquipmentEntity();
+        equipment.setDeviceType("Ładowarka żółć");
+        equipment.setSerialNumber("Zażółć-1");
+        UserEntity user = new UserEntity();
+        user.setEmail("a@campus.edu.pl");
+        LoanEntity loan = new LoanEntity();
+        loan.setId(7L);
+        loan.setEquipment(equipment);
+        loan.setUser(user);
+        loan.setBorrowDate(LocalDateTime.of(2026, 10, 1, 10, 0));
+        loan.setExpectedReturnDate(LocalDateTime.of(2026, 10, 3, 10, 0));
+        when(loanRepository.findAllByOrderByBorrowDateDesc()).thenReturn(List.of(loan));
+
+        byte[] pdf = reportService.exportLoansPdf();
+
+        assertThat(new String(pdf, 0, 4, java.nio.charset.StandardCharsets.US_ASCII)).isEqualTo("%PDF");
+        String text;
+        try (org.apache.pdfbox.pdmodel.PDDocument document =
+                     org.apache.pdfbox.pdmodel.PDDocument.load(pdf)) {
+            text = new org.apache.pdfbox.text.PDFTextStripper().getText(document);
+        }
+        assertThat(text).contains("Zazolc-1");
+        assertThat(text).contains("Campus Gear - wypozyczenia");
+    }
 }

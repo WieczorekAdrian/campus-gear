@@ -162,7 +162,7 @@ test('podział ról: student rezerwuje, opiekun wydaje, student zwraca', async (
   await page.getByRole('button', { name: /przypomnienia/i }).click();
   await expect(page.getByText(/wysłano \d+ przypomnień/i)).toBeVisible({ timeout: 10_000 });
 
-  // 6b. Raporty w panelu: statystyki + CSV (nadal jako opiekun)
+  // 6b. Raporty w panelu: statystyki + CSV + PDF (nadal jako opiekun)
   await expect(page.getByText('Raporty')).toBeVisible();
   await expect(page.getByText('aktywne wypożyczenia')).toBeVisible();
   const downloadPromise = page.waitForEvent('download');
@@ -173,6 +173,14 @@ test('podział ról: student rezerwuje, opiekun wydaje, student zwraca', async (
   const csvContent = fs.readFileSync(csvPath, 'utf-8');
   expect(csvContent).toContain('serialNumber');
   expect(csvContent).toContain(serial);
+
+  const pdfPromise = page.waitForEvent('download');
+  await page.getByRole('button', { name: /pdf/i }).click();
+  const pdfDownload = await pdfPromise;
+  expect(pdfDownload.suggestedFilename()).toContain('.pdf');
+  const pdfPath = await pdfDownload.path();
+  const pdfHead = fs.readFileSync(pdfPath).subarray(0, 4).toString('utf-8');
+  expect(pdfHead).toBe('%PDF');
 
   // 7. Student widzi historię
   await logout(page);

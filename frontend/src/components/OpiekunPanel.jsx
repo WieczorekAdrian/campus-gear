@@ -93,24 +93,27 @@ function OpiekunPanel() {
     const defectStatus = (id, status, okMsg) => runAction(`defect-${id}-${status}`,
         () => axios.patch(`/api/defects/${id}/status`, { status }), okMsg);
 
-    const downloadCsv = () => {
+    const downloadFile = (url, filename, mime) => {
         setErrorMsg('');
-        axios.get('/api/reports/loans.csv', { responseType: 'blob' })
+        axios.get(url, { responseType: 'blob' })
             .then(response => {
-                const url = window.URL.createObjectURL(new Blob([response.data], { type: 'text/csv' }));
+                const objectUrl = window.URL.createObjectURL(new Blob([response.data], { type: mime }));
                 const link = document.createElement('a');
-                link.href = url;
-                link.setAttribute('download', 'wypozyczenia.csv');
+                link.href = objectUrl;
+                link.setAttribute('download', filename);
                 document.body.appendChild(link);
                 link.click();
                 link.remove();
-                window.URL.revokeObjectURL(url);
+                window.URL.revokeObjectURL(objectUrl);
             })
             .catch(error => {
-                console.error('Błąd pobierania CSV', error);
-                setErrorMsg(extractErrorMessage(error, 'Nie udało się pobrać CSV.'));
+                console.error('Błąd pobierania pliku', error);
+                setErrorMsg(extractErrorMessage(error, 'Nie udało się pobrać pliku.'));
             });
     };
+
+    const downloadCsv = () => downloadFile('/api/reports/loans.csv', 'wypozyczenia.csv', 'text/csv');
+    const downloadPdf = () => downloadFile('/api/reports/loans.pdf', 'wypozyczenia.pdf', 'application/pdf');
 
     const sendReminders = () => {
         setErrorMsg('');
@@ -402,6 +405,10 @@ function OpiekunPanel() {
                                 <Button variant="outline" onClick={downloadCsv}>
                                     <Download aria-hidden />
                                     Pobierz wypożyczenia (CSV)
+                                </Button>
+                                <Button variant="outline" onClick={downloadPdf}>
+                                    <Download aria-hidden />
+                                    Pobierz wypożyczenia (PDF)
                                 </Button>
                                 <Button
                                     variant="outline"

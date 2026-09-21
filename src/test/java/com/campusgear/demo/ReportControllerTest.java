@@ -67,4 +67,23 @@ class ReportControllerTest extends AbstractIntegrationTest {
                         .with(user("student@campus.edu.pl").roles("STUDENT")))
                 .andExpect(status().isForbidden());
     }
+
+    @Test
+    void shouldDownloadPdfForOpiekun() throws Exception {
+        when(reportService.exportLoansPdf()).thenReturn("%PDF-1.4 fake".getBytes());
+
+        mockMvc.perform(get("/api/reports/loans.pdf")
+                        .with(user("opiekun@campus.edu.pl").roles("OPIEKUN")))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Content-Disposition",
+                        org.hamcrest.Matchers.containsString("wypozyczenia.pdf")))
+                .andExpect(content().string("%PDF-1.4 fake"));
+    }
+
+    @Test
+    void shouldForbidPdfForStudent() throws Exception {
+        mockMvc.perform(get("/api/reports/loans.pdf")
+                        .with(user("student@campus.edu.pl").roles("STUDENT")))
+                .andExpect(status().isForbidden());
+    }
 }

@@ -41,4 +41,19 @@ public class ReportController {
                 .contentType(new MediaType("text", "csv", StandardCharsets.UTF_8))
                 .body(csv);
     }
+
+    @GetMapping(value = "/loans.pdf", produces = "application/pdf")
+    @PreAuthorize("hasAnyRole('OPIEKUN', 'ADMIN')")
+    public ResponseEntity<byte[]> exportLoansPdf() {
+        byte[] pdf = reportService.exportLoansPdf();
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, ContentDisposition
+                        .attachment()
+                        .filename("wypozyczenia.pdf", StandardCharsets.UTF_8)
+                        .build()
+                        .toString())
+                .contentType(MediaType.APPLICATION_PDF)
+                .body(pdf);
+    }
 }
