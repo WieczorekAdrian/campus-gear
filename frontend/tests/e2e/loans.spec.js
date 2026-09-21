@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import fs from 'node:fs';
 
 const OPIEKUN = { email: 'user2@campus.edu.pl', password: 'Password123!' };
 
@@ -143,7 +144,45 @@ test('podział ról: student rezerwuje, opiekun wydaje, student zwraca', async (
   });
   expect((await damagedCheck.json()).map((e) => e.serialNumber)).toContain(serial);
 
-  // 6. Student widzi historię
+  // 6. Opiekun naprawia usterkę w panelu (jesteśmy zalogowani jako opiekun)
+  await page.goto('/panel');
+  const defectRow = page.locator('tbody tr', { hasText: serial }).first();
+  await expect(defectRow).toBeVisible({ timeout: 10_000 });
+  await defectRow.getByRole('button', { name: /do naprawy/i }).click();
+  await defectRow.getByRole('button', { name: /naprawione/i }).click({ timeout: 10_000 });
+  // Czekamy na komunikat PO zapisie na backendzie - inaczej check ściga się z PATCH-em (flaky).
+  await expect(page.getByText(/wrócił do obiegu/i)).toBeVisible({ timeout: 10_000 });
+
+  const fixedCheck = await request.get('/api/equipment/search?status=DOSTEPNY', {
+    headers: { Authorization: `Bearer ${stToken}` },
+  });
+  expect((await fixedCheck.json()).map((e) => e.serialNumber)).toContain(serial);
+
+  // 6b. Ręczna wysyłka przypomnień z panelu (endpoint + komunikat z liczbą)
+  await page.getByRole('button', { name: /przypomnienia/i }).click();
+  await expect(page.getByText(/wysłano \d+ przypomnień/i)).toBeVisible({ timeout: 10_000 });
+
+  // 6b. Raporty w panelu: statystyki + CSV + PDF (nadal jako opiekun)
+  await expect(page.getByText('Raporty')).toBeVisible();
+  await expect(page.getByText('aktywne wypożyczenia')).toBeVisible();
+  const downloadPromise = page.waitForEvent('download');
+  await page.getByRole('button', { name: /csv/i }).click();
+  const download = await downloadPromise;
+  expect(download.suggestedFilename()).toContain('.csv');
+  const csvPath = await download.path();
+  const csvContent = fs.readFileSync(csvPath, 'utf-8');
+  expect(csvContent).toContain('serialNumber');
+  expect(csvContent).toContain(serial);
+
+  const pdfPromise = page.waitForEvent('download');
+  await page.getByRole('button', { name: /pdf/i }).click();
+  const pdfDownload = await pdfPromise;
+  expect(pdfDownload.suggestedFilename()).toContain('.pdf');
+  const pdfPath = await pdfDownload.path();
+  const pdfHead = fs.readFileSync(pdfPath).subarray(0, 4).toString('utf-8');
+  expect(pdfHead).toBe('%PDF');
+
+  // 7. Student widzi historię
   await logout(page);
   await loginAs(page, student.email, student.password);
   await page.goto('/rentals');

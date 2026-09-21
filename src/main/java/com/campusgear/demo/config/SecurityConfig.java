@@ -51,6 +51,9 @@ public class SecurityConfig {
                         // --- DODANE PRZEZ NAS: Odblokowanie Swaggera ---
                         .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
 
+                        // --- Monitoring: health i metryki muszą być publiczne (Prometheus nie ma JWT) ---
+                        .requestMatchers("/actuator/health", "/actuator/health/**", "/actuator/info", "/actuator/prometheus").permitAll()
+
                         // --- ORYGINALNE REGUŁY KACPRA ---
                         .requestMatchers("/api/auth/**").permitAll() // Logowanie i rejestracja otwarta dla każdego
                         .requestMatchers(HttpMethod.GET, "/api/equipment/**").permitAll() // Przeglądanie sprzętu dostępne dla wszystkich

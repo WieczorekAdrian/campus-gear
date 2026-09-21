@@ -10,6 +10,8 @@ import java.util.List;
 
 public interface ReservationEntityRepository extends JpaRepository<ReservationEntity, Long> {
 
+    long countByStatus(ReservationStatus status);
+
     boolean existsByEquipmentIdAndStartDateLessThanAndEndDateGreaterThan(
             Long equipmentId,
             LocalDateTime endDate,

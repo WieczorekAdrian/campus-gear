@@ -27,13 +27,16 @@ function statusVariant(status) {
   switch (status) {
     case "AKTYWNA":
     case "DOSTEPNY":
+    case "NAPRAWIONA":
       return "success";
     case "ANULOWANA":
     case "ZNISZCZONY":
+    case "ZGLOSZONA":
       return "destructive";
     case "ZAKONCZONA":
     case "WYPOZYCZONY":
     case "ZAREZERWOWANY":
+    case "W_NAPRAWIE":
       return "secondary";
     default:
       return "muted";

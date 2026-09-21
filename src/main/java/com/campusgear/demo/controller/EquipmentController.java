@@ -36,9 +36,10 @@ public class EquipmentController {
     @GetMapping("/search")
     public List<EquipmentResponseDTO> searchEquipment(
             @RequestParam(required = false) EquipmentStatus status,
-            @RequestParam(required = false) String deviceType) {
+            @RequestParam(required = false) String deviceType,
+            @RequestParam(required = false) String location) {
 
-        return equipmentService.searchEquipment(status, deviceType);
+        return equipmentService.searchEquipment(status, deviceType, location);
     }
 
     // --- METODY MODYFIKUJĄCE (Tylko dla Opiekuna) ---
