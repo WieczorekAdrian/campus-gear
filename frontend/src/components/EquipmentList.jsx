@@ -30,6 +30,8 @@ function EquipmentList() {
 
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedStatus, setSelectedStatus] = useState('');
+    const [selectedLocation, setSelectedLocation] = useState('');
+    const [locationInput, setLocationInput] = useState('');
 
     const [reservingId, setReservingId] = useState(null);
     const [startDate, setStartDate] = useState(() => toLocalInputValue(new Date(Date.now() + 24 * 3600 * 1000)));
@@ -38,10 +40,14 @@ function EquipmentList() {
     const [formSuccess, setFormSuccess] = useState('');
     const [submitting, setSubmitting] = useState(false);
 
-    const fetchEquipment = (status) => {
+    const fetchEquipment = (status, location) => {
         setLoading(true);
         setErrorMsg('');
-        const url = status ? `/api/equipment/search?status=${encodeURIComponent(status)}` : '/api/equipment';
+        const params = new URLSearchParams();
+        if (status) params.append('status', status);
+        if (location) params.append('location', location);
+        const query = params.toString();
+        const url = query ? `/api/equipment/search?${query}` : '/api/equipment';
         axios.get(url)
             .then(response => {
                 setEquipment(Array.isArray(response.data) ? response.data : []);
@@ -55,12 +61,14 @@ function EquipmentList() {
     };
 
     useEffect(() => {
-        fetchEquipment('');
-    }, []);
+        fetchEquipment(selectedStatus, selectedLocation);
+    }, [selectedStatus, selectedLocation]);
 
+    // Debounce wpisywania lokalizacji, żeby nie strzelać requestem na każdą literę
     useEffect(() => {
-        fetchEquipment(selectedStatus);
-    }, [selectedStatus]);
+        const timer = setTimeout(() => setSelectedLocation(locationInput), 400);
+        return () => clearTimeout(timer);
+    }, [locationInput]);
 
     const filteredEquipment = equipment.filter(item => {
         const searchLower = searchTerm.trim().toLowerCase();
@@ -121,13 +129,28 @@ function EquipmentList() {
                             className="bg-white/5 border-white/10 pl-9 text-foreground"
                         />
                     </div>
-                    <div className="sm:w-64">
-                        <Select value={selectedStatus} onChange={(e) => setSelectedStatus(e.target.value)}>
+                    <div className="sm:w-56 space-y-2">
+                        <Label htmlFor="statusFilter">Status</Label>
+                        <Select
+                            id="statusFilter"
+                            value={selectedStatus}
+                            onChange={(e) => setSelectedStatus(e.target.value)}
+                        >
                             <option value="">Wszystkie statusy</option>
                             {STATUS_OPTIONS.map(st => (
                                 <option key={st} value={st}>{st}</option>
                             ))}
                         </Select>
+                    </div>
+                    <div className="sm:w-64 space-y-2">
+                        <Label htmlFor="locationFilter">Lokalizacja</Label>
+                        <Input
+                            id="locationFilter"
+                            placeholder="Filtruj po lokalizacji..."
+                            value={locationInput}
+                            onChange={(e) => setLocationInput(e.target.value)}
+                            className="bg-white/5 border-white/10 text-foreground"
+                        />
                     </div>
                 </CardContent>
             </Card>

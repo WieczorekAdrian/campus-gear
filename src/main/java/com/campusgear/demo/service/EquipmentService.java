@@ -5,6 +5,7 @@ import com.campusgear.demo.dto.EquipmentResponseDTO;
 import com.campusgear.demo.entity.EquipmentEntity;
 import com.campusgear.demo.mapper.EquipmentMapper;
 import com.campusgear.demo.repository.EquipmentEntityRepository;
+import com.campusgear.demo.specification.EquipmentSpecs;
 import com.campusgear.demo.status.EquipmentStatus;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
@@ -40,18 +41,8 @@ public class EquipmentService {
     }
 
     @Transactional(readOnly = true)
-    public List<EquipmentResponseDTO> searchEquipment(EquipmentStatus status, String deviceType) {
-        List<EquipmentEntity> entities;
-        if (status != null && deviceType != null) {
-            entities = equipmentRepository.findByStatusAndDeviceType(status, deviceType);
-        } else if (status != null) {
-            entities = equipmentRepository.findByStatus(status);
-        } else if (deviceType != null) {
-            entities = equipmentRepository.findByDeviceType(deviceType);
-        } else {
-            entities = equipmentRepository.findAll();
-        }
-        return entities.stream()
+    public List<EquipmentResponseDTO> searchEquipment(EquipmentStatus status, String deviceType, String location) {
+        return equipmentRepository.findAll(EquipmentSpecs.withFilters(status, deviceType, location)).stream()
                 .map(equipmentMapper::toResponseDTO)
                 .toList();
     }

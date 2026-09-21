@@ -53,4 +53,10 @@ test('lista sprzętu pobiera dane z API i filtruje', async ({ page, request }) =
   await page.getByPlaceholder(/szukaj/i).fill(serial);
   await expect(page.getByText(deviceType).first()).toBeVisible();
   await expect(page.getByText(serial).first()).toBeVisible();
+
+  // Filtr lokalizacji idzie do backendu (LIKE, case-insensitive)
+  await page.getByPlaceholder(/szukaj/i).fill('');
+  await page.getByLabel(/lokalizacja/i).fill('studio nagrań');
+  await expect(page.getByText('Interfejs Audio').first()).toBeVisible({ timeout: 10_000 });
+  await expect(page.getByText(deviceType)).toHaveCount(0);
 });
