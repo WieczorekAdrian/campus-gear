@@ -23,4 +23,8 @@ public interface LoanEntityRepository extends JpaRepository<LoanEntity, Long> {
 
     @EntityGraph(attributePaths = {"equipment", "user"})
     List<LoanEntity> findAllByOrderByBorrowDateDesc();
+
+    @EntityGraph(attributePaths = {"equipment", "user"})
+    List<LoanEntity> findByActualReturnDateIsNullAndExpectedReturnDateBefore(
+            LocalDateTime deadline);
 }

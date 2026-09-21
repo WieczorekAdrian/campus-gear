@@ -158,6 +158,10 @@ test('podział ról: student rezerwuje, opiekun wydaje, student zwraca', async (
   });
   expect((await fixedCheck.json()).map((e) => e.serialNumber)).toContain(serial);
 
+  // 6b. Ręczna wysyłka przypomnień z panelu (endpoint + komunikat z liczbą)
+  await page.getByRole('button', { name: /przypomnienia/i }).click();
+  await expect(page.getByText(/wysłano \d+ przypomnień/i)).toBeVisible({ timeout: 10_000 });
+
   // 6b. Raporty w panelu: statystyki + CSV (nadal jako opiekun)
   await expect(page.getByText('Raporty')).toBeVisible();
   await expect(page.getByText('aktywne wypożyczenia')).toBeVisible();

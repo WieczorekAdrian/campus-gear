@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import axios from '../api/axiosConfig';
-import { ClipboardList, HandCoins, Inbox, Wrench, ChartColumn, Download } from 'lucide-react';
+import { ClipboardList, HandCoins, Inbox, Wrench, ChartColumn, Download, Mail } from 'lucide-react';
 import ReturnDialog from './ReturnDialog';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -110,6 +110,22 @@ function OpiekunPanel() {
                 console.error('Błąd pobierania CSV', error);
                 setErrorMsg(extractErrorMessage(error, 'Nie udało się pobrać CSV.'));
             });
+    };
+
+    const sendReminders = () => {
+        setErrorMsg('');
+        setSuccessMsg('');
+        setBusyId('reminders');
+        axios.post('/api/notifications/reminders')
+            .then(response => {
+                const sent = response.data?.sent ?? 0;
+                setSuccessMsg(`Wysłano ${sent} przypomnień o zwrocie.`);
+            })
+            .catch(error => {
+                console.error('Błąd wysyłki przypomnień', error);
+                setErrorMsg(extractErrorMessage(error, 'Nie udało się wysłać przypomnień.'));
+            })
+            .finally(() => setBusyId(null));
     };
     const confirmReturn = (damaged, damageDescription) => {
         if (!returnTarget) return;
@@ -382,10 +398,20 @@ function OpiekunPanel() {
                             ) : (
                                 <div className="text-sm text-muted-foreground">Brak danych raportu.</div>
                             )}
-                            <Button variant="outline" onClick={downloadCsv}>
-                                <Download aria-hidden />
-                                Pobierz wypożyczenia (CSV)
-                            </Button>
+                            <div className="flex flex-wrap gap-2">
+                                <Button variant="outline" onClick={downloadCsv}>
+                                    <Download aria-hidden />
+                                    Pobierz wypożyczenia (CSV)
+                                </Button>
+                                <Button
+                                    variant="outline"
+                                    onClick={sendReminders}
+                                    disabled={busyId === 'reminders'}
+                                >
+                                    <Mail aria-hidden />
+                                    {busyId === 'reminders' ? 'Wysyłanie...' : 'Wyślij przypomnienia'}
+                                </Button>
+                            </div>
                         </CardContent>
                     </Card>
                 </>

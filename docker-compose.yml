@@ -25,6 +25,8 @@ services:
       - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres-db:5432/campus_gear_db
       - SPRING_DATASOURCE_USERNAME=postgres
       - SPRING_DATASOURCE_PASSWORD=mysecretpassword
+      - SPRING_MAIL_HOST=mailpit
+      - SPRING_MAIL_PORT=1025
     depends_on:
       postgres-db:
         condition: service_healthy
@@ -68,6 +70,13 @@ services:
     depends_on:
       backend-app:
         condition: service_healthy
+
+  mailpit:
+    image: axllent/mailpit:v1.21
+    container_name: campus-gear-mailpit
+    ports:
+      - "8025:8025"
+      - "1025:1025"
 
 volumes:
   pgdata:
