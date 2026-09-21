@@ -143,7 +143,21 @@ test('podział ról: student rezerwuje, opiekun wydaje, student zwraca', async (
   });
   expect((await damagedCheck.json()).map((e) => e.serialNumber)).toContain(serial);
 
-  // 6. Student widzi historię
+  // 6. Opiekun naprawia usterkę w panelu (jesteśmy zalogowani jako opiekun)
+  await page.goto('/panel');
+  const defectRow = page.locator('tbody tr', { hasText: serial }).first();
+  await expect(defectRow).toBeVisible({ timeout: 10_000 });
+  await defectRow.getByRole('button', { name: /do naprawy/i }).click();
+  await defectRow.getByRole('button', { name: /naprawione/i }).click({ timeout: 10_000 });
+  // Czekamy na komunikat PO zapisie na backendzie - inaczej check ściga się z PATCH-em (flaky).
+  await expect(page.getByText(/wrócił do obiegu/i)).toBeVisible({ timeout: 10_000 });
+
+  const fixedCheck = await request.get('/api/equipment/search?status=DOSTEPNY', {
+    headers: { Authorization: `Bearer ${stToken}` },
+  });
+  expect((await fixedCheck.json()).map((e) => e.serialNumber)).toContain(serial);
+
+  // 7. Student widzi historię
   await logout(page);
   await loginAs(page, student.email, student.password);
   await page.goto('/rentals');

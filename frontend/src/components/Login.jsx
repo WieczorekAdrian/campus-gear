@@ -1,21 +1,26 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import axios from '../api/axiosConfig';
 import { useNavigate, Link } from 'react-router-dom';
+import { LogIn } from 'lucide-react';
 import myLogo from '../assets/logo.png';
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Card, CardContent } from "@/components/ui/card";
 
 function Login() {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [errorMsg, setErrorMsg] = useState('');
+    const [submitting, setSubmitting] = useState(false);
 
     const navigate = useNavigate();
 
     const handleLogin = (e) => {
         e.preventDefault();
+        setSubmitting(true);
+        setErrorMsg('');
 
         // 1. Uderzamy w endpoint logowania
         axios.post('/api/auth/login', { email, password })
@@ -37,16 +42,16 @@ function Login() {
             .catch(error => {
                 console.error("Błąd logowania", error);
                 setErrorMsg('Nieprawidłowy email lub hasło.');
-            });
+            })
+            .finally(() => setSubmitting(false));
     };
 
     return (
         <div className="flex min-h-svh flex-col items-center justify-center bg-background p-6 md:p-10">
-            <div className="w-full max-w-sm space-y-8">
+            <div className="w-full max-w-sm space-y-6">
 
                 {/* Sekcja Nagłówka (bez ramki) */}
                 <div className="flex flex-col items-center space-y-2 text-center">
-                    {/* ZMIEŃ NA TO: */}
                     <img
                         src={myLogo}
                         alt="Logo Campus Gear"
@@ -63,48 +68,48 @@ function Login() {
                     </p>
                 </div>
 
-                {/* Sekcja Formularza */}
-                <form onSubmit={handleLogin} className="space-y-6">
-                    {errorMsg && (
-                        <div className="text-sm font-medium text-destructive text-center">
-                            {errorMsg}
-                        </div>
-                    )}
+                <Card className="bg-white/5 border-white/10 shadow-xl">
+                    <CardContent className="p-6">
+                        {/* Sekcja Formularza */}
+                        <form onSubmit={handleLogin} className="space-y-6">
+                            {errorMsg && (
+                                <div className="text-sm font-medium text-destructive text-center">
+                                    {errorMsg}
+                                </div>
+                            )}
 
-                    <div className="space-y-4">
-                        <div className="space-y-2">
-                            <Label htmlFor="email">Email</Label>
-                            <Input
-                                id="email"
-                                type="email"
-                                placeholder="jan.kowalski@campus.edu.pl"
-                                required
-                                value={email}
-                                onChange={(e) => setEmail(e.target.value)}
-                                className="bg-white/5 border-white/10 focus:bg-white/10 transition-colors"
-                            />
-                        </div>
-                        <div className="space-y-2">
-                            <div className="flex items-center justify-between">
-                                <Label htmlFor="password">Hasło</Label>
-                                <Link to="#" className="text-sm underline-offset-4 hover:underline text-muted-foreground">
-                                    Zapomniałeś hasła?
-                                </Link>
+                            <div className="space-y-4">
+                                <div className="space-y-2">
+                                    <Label htmlFor="email">Email</Label>
+                                    <Input
+                                        id="email"
+                                        type="email"
+                                        placeholder="jan.kowalski@campus.edu.pl"
+                                        required
+                                        value={email}
+                                        onChange={(e) => setEmail(e.target.value)}
+                                        className="bg-white/5 border-white/10 focus:bg-white/10 transition-colors"
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="password">Hasło</Label>
+                                    <Input
+                                        id="password"
+                                        type="password"
+                                        required
+                                        value={password}
+                                        onChange={(e) => setPassword(e.target.value)}
+                                        className="bg-white/5 border-white/10 focus:bg-white/10 transition-colors"
+                                    />
+                                </div>
+                                <Button type="submit" className="w-full" disabled={submitting}>
+                                    <LogIn aria-hidden />
+                                    {submitting ? 'Logowanie...' : 'Zaloguj się'}
+                                </Button>
                             </div>
-                            <Input
-                                id="password"
-                                type="password"
-                                required
-                                value={password}
-                                onChange={(e) => setPassword(e.target.value)}
-                                className="bg-white/5 border-white/10 focus:bg-white/10 transition-colors"
-                            />
-                        </div>
-                        <Button type="submit" className="w-full">
-                            Zaloguj się
-                        </Button>
-                    </div>
-                </form>
+                        </form>
+                    </CardContent>
+                </Card>
             </div>
         </div>
     );
