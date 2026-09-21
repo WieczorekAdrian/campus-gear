@@ -9,6 +9,8 @@ import java.util.List;
 
 public interface DefectReportEntityRepository extends JpaRepository<DefectReportEntity, Long> {
 
+    long countByStatus(DefectStatus status);
+
     @EntityGraph(attributePaths = {"equipment", "reporter"})
     List<DefectReportEntity> findByStatusOrderByReportDateDesc(DefectStatus status);
 

@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import fs from 'node:fs';
 
 const OPIEKUN = { email: 'user2@campus.edu.pl', password: 'Password123!' };
 
@@ -156,6 +157,18 @@ test('podział ról: student rezerwuje, opiekun wydaje, student zwraca', async (
     headers: { Authorization: `Bearer ${stToken}` },
   });
   expect((await fixedCheck.json()).map((e) => e.serialNumber)).toContain(serial);
+
+  // 6b. Raporty w panelu: statystyki + CSV (nadal jako opiekun)
+  await expect(page.getByText('Raporty')).toBeVisible();
+  await expect(page.getByText('aktywne wypożyczenia')).toBeVisible();
+  const downloadPromise = page.waitForEvent('download');
+  await page.getByRole('button', { name: /csv/i }).click();
+  const download = await downloadPromise;
+  expect(download.suggestedFilename()).toContain('.csv');
+  const csvPath = await download.path();
+  const csvContent = fs.readFileSync(csvPath, 'utf-8');
+  expect(csvContent).toContain('serialNumber');
+  expect(csvContent).toContain(serial);
 
   // 7. Student widzi historię
   await logout(page);

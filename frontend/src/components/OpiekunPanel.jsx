@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import axios from '../api/axiosConfig';
-import { ClipboardList, HandCoins, Inbox, Wrench } from 'lucide-react';
+import { ClipboardList, HandCoins, Inbox, Wrench, ChartColumn, Download } from 'lucide-react';
 import ReturnDialog from './ReturnDialog';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -23,6 +23,7 @@ function OpiekunPanel() {
     const [reservations, setReservations] = useState([]);
     const [loans, setLoans] = useState([]);
     const [defects, setDefects] = useState([]);
+    const [summary, setSummary] = useState(null);
     const [loading, setLoading] = useState(true);
     const [errorMsg, setErrorMsg] = useState('');
     const [successMsg, setSuccessMsg] = useState('');
@@ -37,11 +38,13 @@ function OpiekunPanel() {
             axios.get('/api/reservations'),
             axios.get('/api/loans', { params: { activeOnly: false } }),
             axios.get('/api/defects'),
+            axios.get('/api/reports/summary'),
         ])
-            .then(([resRes, resLoans, resDefects]) => {
+            .then(([resRes, resLoans, resDefects, resSummary]) => {
                 setReservations(Array.isArray(resRes.data) ? resRes.data : []);
                 setLoans(Array.isArray(resLoans.data) ? resLoans.data : []);
                 setDefects(Array.isArray(resDefects.data) ? resDefects.data : []);
+                setSummary(resSummary.data ?? null);
                 setLoading(false);
             })
             .catch(error => {
@@ -89,6 +92,25 @@ function OpiekunPanel() {
         () => axios.patch(`/api/reservations/${id}/cancel`));
     const defectStatus = (id, status, okMsg) => runAction(`defect-${id}-${status}`,
         () => axios.patch(`/api/defects/${id}/status`, { status }), okMsg);
+
+    const downloadCsv = () => {
+        setErrorMsg('');
+        axios.get('/api/reports/loans.csv', { responseType: 'blob' })
+            .then(response => {
+                const url = window.URL.createObjectURL(new Blob([response.data], { type: 'text/csv' }));
+                const link = document.createElement('a');
+                link.href = url;
+                link.setAttribute('download', 'wypozyczenia.csv');
+                document.body.appendChild(link);
+                link.click();
+                link.remove();
+                window.URL.revokeObjectURL(url);
+            })
+            .catch(error => {
+                console.error('Błąd pobierania CSV', error);
+                setErrorMsg(extractErrorMessage(error, 'Nie udało się pobrać CSV.'));
+            });
+    };
     const confirmReturn = (damaged, damageDescription) => {
         if (!returnTarget) return;
         const { id } = returnTarget;
@@ -312,6 +334,58 @@ function OpiekunPanel() {
                                     title="Brak usterek w tej zakładce"
                                 />
                             )}
+                        </CardContent>
+                    </Card>
+
+                    <Card className="bg-white/5 border-white/10 shadow-xl">
+                        <CardHeader>
+                            <CardTitle className="flex items-center gap-2">
+                                <ChartColumn aria-hidden className="size-5 text-muted-foreground" />
+                                Raporty
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                            {summary ? (
+                                <>
+                                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                                        <div className="rounded-md border border-white/10 bg-white/5 p-4 text-center">
+                                            <div className="text-2xl font-bold">{summary.equipmentTotal}</div>
+                                            <div className="text-xs text-muted-foreground">sprzętów</div>
+                                        </div>
+                                        <div className="rounded-md border border-white/10 bg-white/5 p-4 text-center">
+                                            <div className="text-2xl font-bold">{summary.loansActive}</div>
+                                            <div className="text-xs text-muted-foreground">aktywne wypożyczenia</div>
+                                        </div>
+                                        <div className="rounded-md border border-white/10 bg-white/5 p-4 text-center">
+                                            <div className="text-2xl font-bold text-destructive">{summary.loansOverdue}</div>
+                                            <div className="text-xs text-muted-foreground">po terminie</div>
+                                        </div>
+                                        <div className="rounded-md border border-white/10 bg-white/5 p-4 text-center">
+                                            <div className="text-2xl font-bold">{summary.loansReturned}</div>
+                                            <div className="text-xs text-muted-foreground">zwrócone</div>
+                                        </div>
+                                    </div>
+                                    {summary.topEquipment?.length > 0 && (
+                                        <div className="text-sm">
+                                            <div className="mb-2 font-medium text-muted-foreground">Najczęściej wypożyczane</div>
+                                            <ul className="space-y-1">
+                                                {summary.topEquipment.map(item => (
+                                                    <li key={item.id} className="flex justify-between rounded-md border border-white/10 bg-white/5 px-3 py-2">
+                                                        <span>{item.deviceType} <span className="font-mono text-xs text-muted-foreground">{item.serialNumber}</span></span>
+                                                        <span className="font-medium">{item.loans}×</span>
+                                                    </li>
+                                                ))}
+                                            </ul>
+                                        </div>
+                                    )}
+                                </>
+                            ) : (
+                                <div className="text-sm text-muted-foreground">Brak danych raportu.</div>
+                            )}
+                            <Button variant="outline" onClick={downloadCsv}>
+                                <Download aria-hidden />
+                                Pobierz wypożyczenia (CSV)
+                            </Button>
                         </CardContent>
                     </Card>
                 </>
