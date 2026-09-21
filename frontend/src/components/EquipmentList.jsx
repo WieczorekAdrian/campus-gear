@@ -119,7 +119,7 @@ function EquipmentList() {
             )}
 
             <Card className="bg-white/5 border-white/10">
-                <CardContent className="flex flex-col sm:flex-row gap-3 p-4">
+                <CardContent className="flex flex-col sm:flex-row sm:items-end gap-3 p-4">
                     <div className="relative flex-1">
                         <Search aria-hidden className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
                         <Input
