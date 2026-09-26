@@ -3,7 +3,9 @@ package com.campusgear.demo;
 import com.campusgear.demo.dto.ReservationRequestDTO;
 import com.campusgear.demo.entity.EquipmentEntity;
 import com.campusgear.demo.entity.UserEntity;
+import com.campusgear.demo.repository.DefectReportEntityRepository;
 import com.campusgear.demo.repository.EquipmentEntityRepository;
+import com.campusgear.demo.repository.LoanEntityRepository;
 import com.campusgear.demo.repository.ReservationEntityRepository;
 import com.campusgear.demo.repository.UserEntityRepository;
 import com.campusgear.demo.service.ReservationService;
@@ -34,12 +36,20 @@ class ReservationConcurrencyIntegrationTest extends AbstractIntegrationTest {
     @Autowired
     private ReservationEntityRepository reservationRepository;
 
+    @Autowired
+    private LoanEntityRepository loanRepository;
+
+    @Autowired
+    private DefectReportEntityRepository defectReportRepository;
+
     private UserEntity testUser;
     private EquipmentEntity testEquipment;
 
     @BeforeEach
     void setUp() {
+        loanRepository.deleteAll();
         reservationRepository.deleteAll();
+        defectReportRepository.deleteAll();
         equipmentRepository.deleteAll();
         userRepository.deleteAll();
 

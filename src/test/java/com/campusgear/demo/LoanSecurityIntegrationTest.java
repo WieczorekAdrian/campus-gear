@@ -6,6 +6,7 @@ import com.campusgear.demo.entity.EquipmentEntity;
 import com.campusgear.demo.entity.LoanEntity;
 import com.campusgear.demo.entity.ReservationEntity;
 import com.campusgear.demo.entity.UserEntity;
+import com.campusgear.demo.repository.DefectReportEntityRepository;
 import com.campusgear.demo.repository.EquipmentEntityRepository;
 import com.campusgear.demo.repository.LoanEntityRepository;
 import com.campusgear.demo.repository.ReservationEntityRepository;
@@ -57,6 +58,9 @@ class LoanSecurityIntegrationTest extends AbstractIntegrationTest {
     private LoanEntityRepository loanRepository;
 
     @Autowired
+    private DefectReportEntityRepository defectReportRepository;
+
+    @Autowired
     private PasswordEncoder passwordEncoder;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
@@ -68,6 +72,7 @@ class LoanSecurityIntegrationTest extends AbstractIntegrationTest {
     void setUp() throws Exception {
         loanRepository.deleteAll();
         reservationRepository.deleteAll();
+        defectReportRepository.deleteAll();
         equipmentRepository.deleteAll();
         userRepository.deleteAll();
 

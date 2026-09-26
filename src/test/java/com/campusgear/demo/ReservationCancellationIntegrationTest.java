@@ -6,7 +6,9 @@ import com.campusgear.demo.dto.ReservationRequestDTO;
 import com.campusgear.demo.entity.EquipmentEntity;
 import com.campusgear.demo.entity.ReservationEntity;
 import com.campusgear.demo.entity.UserEntity;
+import com.campusgear.demo.repository.DefectReportEntityRepository;
 import com.campusgear.demo.repository.EquipmentEntityRepository;
+import com.campusgear.demo.repository.LoanEntityRepository;
 import com.campusgear.demo.repository.ReservationEntityRepository;
 import com.campusgear.demo.repository.UserEntityRepository;
 import com.campusgear.demo.status.EquipmentStatus;
@@ -46,6 +48,12 @@ class ReservationCancellationIntegrationTest extends AbstractIntegrationTest {
     @Autowired
     private ReservationEntityRepository reservationRepository;
 
+    @Autowired
+    private LoanEntityRepository loanRepository;
+
+    @Autowired
+    private DefectReportEntityRepository defectReportRepository;
+
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     private UserEntity testStudent;
@@ -54,7 +62,9 @@ class ReservationCancellationIntegrationTest extends AbstractIntegrationTest {
 
     @BeforeEach
     void setUp() throws Exception {
+        loanRepository.deleteAll();
         reservationRepository.deleteAll();
+        defectReportRepository.deleteAll();
         equipmentRepository.deleteAll();
         userRepository.deleteAll();
 

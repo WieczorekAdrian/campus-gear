@@ -15,6 +15,8 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.web.servlet.util.matcher.PathPatternRequestMatcher;
+import static org.springframework.security.web.servlet.util.matcher.PathPatternRequestMatcher.withDefaults;
 
 @Configuration
 @EnableWebSecurity
@@ -49,7 +51,13 @@ public class SecurityConfig {
                 // 3. Reguły dostępu (z lotu ptaka)
                 .authorizeHttpRequests(auth -> auth
                         // --- DODANE PRZEZ NAS: Odblokowanie Swaggera ---
-                        .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
+                        // springdoc rejestruje /v3/api-docs poza MVC, więc zwykły String-matcher go nie łapie.
+                        // PathPattern matcher łapie wszystko: /v3/api-docs, /v3/api-docs.yaml, /v3/api-docs/...
+                        .requestMatchers(
+                                withDefaults().matcher("/v3/**"),
+                                withDefaults().matcher("/swagger-ui/**"),
+                                withDefaults().matcher("/swagger-ui.html")
+                        ).permitAll()
 
                         // --- Monitoring: health i metryki muszą być publiczne (Prometheus nie ma JWT) ---
                         .requestMatchers("/actuator/health", "/actuator/health/**", "/actuator/info", "/actuator/prometheus").permitAll()

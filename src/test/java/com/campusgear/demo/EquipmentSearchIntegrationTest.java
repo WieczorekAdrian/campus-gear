@@ -1,7 +1,11 @@
 package com.campusgear.demo;
 
 import com.campusgear.demo.entity.EquipmentEntity;
+import com.campusgear.demo.repository.DefectReportEntityRepository;
 import com.campusgear.demo.repository.EquipmentEntityRepository;
+import com.campusgear.demo.repository.LoanEntityRepository;
+import com.campusgear.demo.repository.ReservationEntityRepository;
+import com.campusgear.demo.repository.UserEntityRepository;
 import com.campusgear.demo.specification.EquipmentSpecs;
 import com.campusgear.demo.status.EquipmentStatus;
 import org.junit.jupiter.api.BeforeEach;
@@ -24,9 +28,25 @@ class EquipmentSearchIntegrationTest extends AbstractIntegrationTest {
     @Autowired
     private EquipmentEntityRepository equipmentRepository;
 
+    @Autowired
+    private LoanEntityRepository loanRepository;
+
+    @Autowired
+    private ReservationEntityRepository reservationRepository;
+
+    @Autowired
+    private DefectReportEntityRepository defectReportRepository;
+
+    @Autowired
+    private UserEntityRepository userRepository;
+
     @BeforeEach
     void setUp() {
+        loanRepository.deleteAll();
+        reservationRepository.deleteAll();
+        defectReportRepository.deleteAll();
         equipmentRepository.deleteAll();
+        userRepository.deleteAll();
 
         equipmentRepository.save(item("Laptop", "Magazyn Główny", EquipmentStatus.DOSTEPNY));
         equipmentRepository.save(item("Projektor", "Studio Nagrań A", EquipmentStatus.DOSTEPNY));
