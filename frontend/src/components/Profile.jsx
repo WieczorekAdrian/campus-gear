@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from '../api/axiosConfig';
-import { LogOut, Mail, User as UserIcon, ShieldCheck } from 'lucide-react';
+import { LogOut, Mail, User as UserIcon, ShieldCheck, Activity, ExternalLink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { PageHeader } from '@/components/ui/page-header';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -87,6 +87,57 @@ function Profile() {
                             <LogOut aria-hidden />
                             Wyloguj
                         </Button>
+                    </CardContent>
+                </Card>
+            )}
+
+            {!loading && !errorMsg && (profile?.role === 'ROLE_OPIEKUN' || profile?.role === 'ROLE_ADMIN') && (
+                <Card className="bg-white/5 border-white/10 shadow-xl">
+                    <CardHeader>
+                        <CardTitle className="flex items-center gap-2 text-base">
+                            <Activity aria-hidden className="size-5 text-muted-foreground" />
+                            Diagnostyka backendu
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <p className="mb-4 text-sm text-muted-foreground">
+                            Health backendu i narzędzia pomocnicze.
+                        </p>
+                        <div className="flex flex-wrap gap-2">
+                            <Button variant="outline" size="sm" asChild>
+                                <a href="http://localhost:8080/actuator/health" target="_blank" rel="noreferrer">
+                                    <ExternalLink aria-hidden />
+                                    Health
+                                </a>
+                            </Button>
+                            <Button variant="outline" size="sm" asChild>
+                                <a href="http://localhost:8080/swagger-ui.html" target="_blank" rel="noreferrer">
+                                    <ExternalLink aria-hidden />
+                                    Swagger
+                                </a>
+                            </Button>
+                            <Button variant="outline" size="sm" asChild>
+                                <a href="http://localhost:9090" target="_blank" rel="noreferrer">
+                                    <ExternalLink aria-hidden />
+                                    Prometheus
+                                </a>
+                            </Button>
+                            <Button variant="outline" size="sm" asChild>
+                                <a href="http://localhost:3000" target="_blank" rel="noreferrer">
+                                    <ExternalLink aria-hidden />
+                                    Grafana
+                                </a>
+                            </Button>
+                            <Button variant="outline" size="sm" asChild>
+                                <a href="http://localhost:8025" target="_blank" rel="noreferrer">
+                                    <ExternalLink aria-hidden />
+                                    Mailpit
+                                </a>
+                            </Button>
+                        </div>
+                        <p className="mt-3 text-xs text-muted-foreground">
+                            Grafana login: admin / admin.
+                        </p>
                     </CardContent>
                 </Card>
             )}

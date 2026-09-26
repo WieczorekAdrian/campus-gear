@@ -2,6 +2,10 @@ package com.campusgear.demo;
 
 import com.campusgear.demo.dto.LoginDto;
 import com.campusgear.demo.dto.RegisterDto;
+import com.campusgear.demo.repository.DefectReportEntityRepository;
+import com.campusgear.demo.repository.EquipmentEntityRepository;
+import com.campusgear.demo.repository.LoanEntityRepository;
+import com.campusgear.demo.repository.ReservationEntityRepository;
 import com.campusgear.demo.repository.UserEntityRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -28,10 +32,29 @@ class AuthControllerIntegrationTest extends AbstractIntegrationTest {
     @Autowired
     private UserEntityRepository userRepository;
 
+    @Autowired
+    private LoanEntityRepository loanRepository;
+
+    @Autowired
+    private ReservationEntityRepository reservationRepository;
+
+    @Autowired
+    private DefectReportEntityRepository defectReportRepository;
+
+    @Autowired
+    private EquipmentEntityRepository equipmentRepository;
+
 
     @BeforeEach
     void setUp() {
-        // Czyszczenie bazy przed każdym testem w danej klasie
+        // Czyszczenie bazy przed każdym testem w danej klasie.
+        // Kolejność ważna przez klucze obce: Loan -> Reservation -> Defect -> Equipment -> User.
+        // Sam userRepository.deleteAll() rzucał DataIntegrityViolationException,
+        // bo kontener Postgres jest współdzielony między klasami testowymi.
+        loanRepository.deleteAll();
+        reservationRepository.deleteAll();
+        defectReportRepository.deleteAll();
+        equipmentRepository.deleteAll();
         userRepository.deleteAll();
     }
 

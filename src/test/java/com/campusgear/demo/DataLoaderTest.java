@@ -1,13 +1,15 @@
 package com.campusgear.demo;
 
 import com.campusgear.demo.config.DataLoader;
+import com.campusgear.demo.repository.DefectReportEntityRepository;
+import com.campusgear.demo.repository.EquipmentEntityRepository;
+import com.campusgear.demo.repository.LoanEntityRepository;
+import com.campusgear.demo.repository.ReservationEntityRepository;
 import com.campusgear.demo.repository.UserEntityRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.context.testng.AbstractTestNGSpringContextTests;
-import org.springframework.transaction.annotation.Transactional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -18,11 +20,28 @@ class DataLoaderTest extends AbstractIntegrationTest{
     private UserEntityRepository userRepository;
 
     @Autowired
+    private LoanEntityRepository loanRepository;
+
+    @Autowired
+    private ReservationEntityRepository reservationRepository;
+
+    @Autowired
+    private DefectReportEntityRepository defectReportRepository;
+
+    @Autowired
+    private EquipmentEntityRepository equipmentRepository;
+
+    @Autowired
     private DataLoader dataLoader; // Wstrzykujemy nasz seeder
 
     @BeforeEach
     void setUp() {
-        userRepository.deleteAll(); // Czyścimy bazę przed każdym testem
+        // Czyścimy całą bazę w kolejności FK (kontener Postgres jest współdzielony).
+        loanRepository.deleteAll();
+        reservationRepository.deleteAll();
+        defectReportRepository.deleteAll();
+        equipmentRepository.deleteAll();
+        userRepository.deleteAll();
         dataLoader.run();           // Ręcznie uruchamiamy seeder, żeby mieć pewność!
     }
 
